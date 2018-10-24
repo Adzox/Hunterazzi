@@ -15,12 +15,22 @@ public class InfluenceMap : MonoBehaviour {
     int height;
     private float[,] map;
 
+    int testPos;
+
     // Use this for initialization
     void Start () {
         origo = transform.position - new Vector3(dimensions.x, 0, dimensions.y) / 2;
         width = Mathf.FloorToInt(dimensions.x / cellSize);
         height = Mathf.FloorToInt(dimensions.y / cellSize);
         map = new float[width, height];
+    }
+
+    void Update() {
+        if (Input.GetKeyDown("right")) testPos++;
+        if (Input.GetKeyDown("up")) {
+            map[testPos, testPos] += 0.1f;
+            Display();
+        }
     }
 
     private void OnDrawGizmos() {
@@ -70,5 +80,18 @@ public class InfluenceMap : MonoBehaviour {
             return map[pos.x, pos.y];
         }
         return 0;
+    }
+
+    public void Display() {
+        Texture2D tex = new Texture2D(width, height);
+        tex.filterMode = FilterMode.Point;
+        GetComponent<Renderer>().material.mainTexture = tex;
+        for (int i = 0; i < width; ++i) {
+            for (int j = 0; j < height; ++j) {
+                float c = map[i, j];
+                tex.SetPixel(i, j, new Color(c, c, c, 0.5f));
+            }
+        }
+        tex.Apply();
     }
 }
