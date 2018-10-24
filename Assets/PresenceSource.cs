@@ -13,6 +13,16 @@ public class PresenceSource : InfluenceSource {
         }
     }
 
+    private void OnEnable() {
+        if (parentMap != null)
+            parentMap.AddInfluenceSource(this);
+    }
+
+    private void OnDisable() {
+        if (parentMap != null)
+            parentMap.RemoveInfluenceSource(this);
+    }
+
     private void OnDestroy() {
         if (parentMap != null)
             parentMap.RemoveInfluenceSource(this);

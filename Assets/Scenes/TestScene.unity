@@ -379,13 +379,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   obstacles: {fileID: 0}
-  cellSize: 0.1
+  cellSize: 0.5
   dimensions: {x: 10, y: 10}
-  layers: 2
+  layers: 1
   layerInfluences:
   - 1
-  - 0.2
-  updateFrequency: 30
+  updateFrequency: 1
   updateTime: 0
 --- !u!1 &534669902
 GameObject:

@@ -54,7 +54,7 @@ public class InfluenceMap : MonoBehaviour {
         StartCoroutine("UpdateMap");
     }
 
-    private void OnDrawGizmos() {
+    private void OnDrawGizmosSelected() {
         Gizmos.color = Color.red;
         Gizmos.DrawSphere(transform.position - new Vector3(dimensions.x, 0, dimensions.y) / 2, 0.1f);
         Gizmos.color = Color.blue;
@@ -99,6 +99,7 @@ public class InfluenceMap : MonoBehaviour {
         return pos.x >= 0 && pos.x < width && pos.y >= 0 && pos.y < height;
     }
 
+    // RETURNS WRONG COORDINATES!!!!
     public Vector2Int WorldToGrid(Vector3 point) {
         var pos = point - origo;
         int x = Mathf.FloorToInt(pos.x);
@@ -122,6 +123,8 @@ public class InfluenceMap : MonoBehaviour {
         for (int i = 0; i < layers; i++) {
             int l = (i + currentLayer) % layers;
             total += mapz[l][x, y] * layerInfluences[i];
+            if (!Mathf.Approximately(mapz[l][x, y], 0))
+                Debug.Log(mapz[l][x, y]);
         }
         return total;
     }
@@ -130,6 +133,8 @@ public class InfluenceMap : MonoBehaviour {
         for (int i = 0; i < width; ++i) {
             for (int j = 0; j < height; ++j) {
                 float c = GetInfluence(i, j);
+                if (!Mathf.Approximately(c, 0))
+                    Debug.Log(c);
                 tex.SetPixel(i, j, new Color(c, c, c, 0.5f));
             }
         }
@@ -138,7 +143,6 @@ public class InfluenceMap : MonoBehaviour {
 
     public IEnumerator UpdateMap() {
         while (true) {
-            Debug.Log("Current layer: " + currentLayer);
             currentLayer++;
             if (currentLayer >= layers)
                 currentLayer = 0;
@@ -160,6 +164,8 @@ public class InfluenceMap : MonoBehaviour {
         }
     }
 
+    // Ignores the 4 adjacent neighbors, returns too large numbers
+    // Check if 
     void DFSAdd(float startValue, float modifier, Vector2Int pos, HashSet<Vector2Int> visited, float[] neighborDiminish, int iteration, int maxIterations) {
         if (iteration >= maxIterations) {
             return;
@@ -175,9 +181,9 @@ public class InfluenceMap : MonoBehaviour {
         }
     }
 
-    // (x - c)(x + c)/d, x is current, c is max, d is height
+    // (x - c)(x + c)/(c*c/d), x is current, c is max, d is height
     // Consider using exp here for point-based data (positions?)
     float GetValue(int maxIterations, int currentIteration, float startValue) {
-        return (currentIteration - maxIterations) * (currentIteration + maxIterations) / startValue;
+        return -(currentIteration - maxIterations) * (currentIteration + maxIterations) / (maxIterations * maxIterations / startValue);
     }
 }
