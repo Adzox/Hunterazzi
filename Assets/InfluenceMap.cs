@@ -14,7 +14,7 @@ public class InfluenceMap : MonoBehaviour {
 
     private const float decay = 2;
 
-    private List<InfluenceSource> sources;
+    private List<InfluenceSource> sources = new List<InfluenceSource>();
 
     [Range(1, 5)]
     public int layers;
@@ -44,13 +44,12 @@ public class InfluenceMap : MonoBehaviour {
         mapz = new float[layers][,];
         currentLayer = 0;
         mapz[currentLayer] = new float[width, height];
-        sources = new List<InfluenceSource>();
         updateTime = 1 / updateFrequency;
+        StartCoroutine("UpdateMap");
     }
 
     private void OnDrawGizmos() {
         Gizmos.color = Color.red;
-        Vector3 origo = transform.position - new Vector3(dimensions.x, 0, dimensions.y) / 2;
         Gizmos.DrawSphere(transform.position - new Vector3(dimensions.x, 0, dimensions.y) / 2, 0.1f);
         Gizmos.color = Color.blue;
         if (sources != null) {
@@ -113,7 +112,6 @@ public class InfluenceMap : MonoBehaviour {
     }
 
     private float GetInfluence(int x, int y) {
-        int current = currentLayer;
         float total = 0;
         for (int i = 0; i < layers; i++) {
             int l = (i + currentLayer) % layers;
@@ -124,6 +122,7 @@ public class InfluenceMap : MonoBehaviour {
 
     public IEnumerator UpdateMap() {
         while (true) {
+            Debug.Log("Current layer: " + currentLayer);
             currentLayer++;
             if (currentLayer >= layers)
                 currentLayer = 0;
