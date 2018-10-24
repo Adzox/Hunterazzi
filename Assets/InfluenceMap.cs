@@ -25,6 +25,8 @@ public class InfluenceMap : MonoBehaviour {
     int height;
     private float[][,] mapz;
 
+    Texture2D tex;
+
     private float[] defaultNeighborDiminish = { 1, 1, 1, 1, 1, 1, 1, 1 };
 
     public float updateFrequency = 30;
@@ -45,6 +47,10 @@ public class InfluenceMap : MonoBehaviour {
         currentLayer = 0;
         mapz[currentLayer] = new float[width, height];
         updateTime = 1 / updateFrequency;
+
+        tex = new Texture2D(width, height);
+        GetComponent<Renderer>().material.mainTexture = tex;
+        tex.filterMode = FilterMode.Point;
         StartCoroutine("UpdateMap");
     }
 
@@ -115,9 +121,19 @@ public class InfluenceMap : MonoBehaviour {
         float total = 0;
         for (int i = 0; i < layers; i++) {
             int l = (i + currentLayer) % layers;
-            total += mapz[l][x, y] * (1 - i / layers);
+            total += mapz[l][x, y] * layerInfluences[i];
         }
-        return 0;
+        return total;
+    }
+
+    public void Display() {
+        for (int i = 0; i < width; ++i) {
+            for (int j = 0; j < height; ++j) {
+                float c = GetInfluence(i, j);
+                tex.SetPixel(i, j, new Color(c, c, c, 0.5f));
+            }
+        }
+        tex.Apply();
     }
 
     public IEnumerator UpdateMap() {
@@ -133,6 +149,7 @@ public class InfluenceMap : MonoBehaviour {
             foreach (InfluenceSource source in sources) {
                 InsertNewValues(source, defaultNeighborDiminish);
             }
+            Display();
             yield return new WaitForSeconds(updateTime);
         }
     }
