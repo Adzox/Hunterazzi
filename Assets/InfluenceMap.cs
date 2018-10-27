@@ -55,9 +55,13 @@ public class InfluenceMap : MonoBehaviour {
     }
 
     private void OnDrawGizmosSelected() {
+        origo = transform.position - new Vector3(dimensions.x, 0, dimensions.y) / 2;
         Gizmos.color = Color.red;
-        Gizmos.DrawSphere(transform.position - new Vector3(dimensions.x, 0, dimensions.y) / 2, 0.1f);
+        Gizmos.DrawSphere(origo, 0.1f);
         Gizmos.color = Color.blue;
+        Gizmos.DrawSphere(GridToWorld(WorldToGrid(Vector3.zero)), 0.2f);
+        Gizmos.DrawSphere(GridToWorld(WorldToGrid(Vector3.one * 4)), 0.2f);
+        Gizmos.DrawSphere(GridToWorld(WorldToGrid(Vector3.one)), 0.2f);
         if (sources != null) {
             foreach (InfluenceSource source in sources) {
                 Gizmos.DrawSphere(source.transform.position, 0.1f);
@@ -99,7 +103,6 @@ public class InfluenceMap : MonoBehaviour {
         return pos.x >= 0 && pos.x < width && pos.y >= 0 && pos.y < height;
     }
 
-    // RETURNS WRONG COORDINATES!!!!
     public Vector2Int WorldToGrid(Vector3 point) {
         var pos = point - origo;
         int x = Mathf.FloorToInt(pos.x);
@@ -160,30 +163,23 @@ public class InfluenceMap : MonoBehaviour {
     
     void InsertNewValues(InfluenceSource source, float[] neighborDiminish) {
         if (InBounds(WorldToGrid(source.transform.position))) {
-            DFSAdd(source.sourceValue, 1, WorldToGrid(source.transform.position), new HashSet<Vector2Int>(), neighborDiminish, 0, source.range);
+            DFSAdd(source, 1, WorldToGrid(source.transform.position), new HashSet<Vector2Int>(), neighborDiminish, 0);
         }
     }
 
-    // Ignores the 4 adjacent neighbors, returns too large numbers
-    // Check if 
-    void DFSAdd(float startValue, float modifier, Vector2Int pos, HashSet<Vector2Int> visited, float[] neighborDiminish, int iteration, int maxIterations) {
-        if (iteration >= maxIterations) {
+    // Ignores the 4 adjacent neighbors
+    void DFSAdd(InfluenceSource source, float modifier, Vector2Int pos, HashSet<Vector2Int> visited, float[] neighborDiminish, int iteration) {
+        if (iteration >= source.range) {
             return;
         } else {
-            float value = GetValue(maxIterations, iteration, startValue);
+            float value = source.GetDecayValue(source.range, iteration, source.sourceValue);
             mapz[currentLayer][pos.x, pos.y] += value * modifier;
             foreach (var pair in Extensions.Zip(GetNeighbors(pos), neighborDiminish)) {
                 if (InBounds(pair.Key) && !visited.Contains(pair.Key)) {
                     visited.Add(pair.Key);
-                    DFSAdd(startValue, pair.Value, pair.Key, visited, neighborDiminish, iteration + 1, maxIterations);
+                    DFSAdd(source, pair.Value, pair.Key, visited, neighborDiminish, iteration + 1);
                 }
             }
         }
-    }
-
-    // (x - c)(x + c)/(c*c/d), x is current, c is max, d is height
-    // Consider using exp here for point-based data (positions?)
-    float GetValue(int maxIterations, int currentIteration, float startValue) {
-        return -(currentIteration - maxIterations) * (currentIteration + maxIterations) / (maxIterations * maxIterations / startValue);
     }
 }

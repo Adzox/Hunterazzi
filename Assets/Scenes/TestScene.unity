@@ -379,7 +379,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   obstacles: {fileID: 0}
-  cellSize: 0.5
+  cellSize: 1
   dimensions: {x: 10, y: 10}
   layers: 1
   layerInfluences:
