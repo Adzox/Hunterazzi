@@ -7,6 +7,7 @@ using UnityEngine;
 public class InfluenceMap : MonoBehaviour {
 
     [Tooltip("The parent GameObject for all obstacles.")]
+    // Replace with Navmesh!
     public GameObject obstacles;
     public float cellSize;
     public Vector2 dimensions;
@@ -30,7 +31,7 @@ public class InfluenceMap : MonoBehaviour {
     private float[] defaultNeighborDiminish = { 1, 1, 1, 1, 1, 1, 1, 1 };
 
     public float updateFrequency = 30;
-    public float updateTime;
+    private float updateTime;
 
     private void OnValidate() {
         if (layerInfluences.Length != layers) {
@@ -38,9 +39,8 @@ public class InfluenceMap : MonoBehaviour {
         }
     }
 
-    // Use this for initialization
     void Start () {
-        origo = transform.position - new Vector3(dimensions.x, 0, dimensions.y) / 2;
+        origo = transform.position - new Vector3(dimensions.x * transform.lossyScale.x, 0, dimensions.y * transform.lossyScale.z) / 2;
         width = Mathf.FloorToInt(dimensions.x / cellSize);
         height = Mathf.FloorToInt(dimensions.y / cellSize);
         mapz = new float[layers][,];
@@ -55,13 +55,10 @@ public class InfluenceMap : MonoBehaviour {
     }
 
     private void OnDrawGizmosSelected() {
-        origo = transform.position - new Vector3(dimensions.x, 0, dimensions.y) / 2;
-        Gizmos.color = Color.red;
+        origo = transform.position - new Vector3(dimensions.x * transform.lossyScale.x, 0, dimensions.y * transform.lossyScale.z) / 2;
+        Gizmos.color = Color.black;
         Gizmos.DrawSphere(origo, 0.1f);
-        Gizmos.color = Color.blue;
-        Gizmos.DrawSphere(GridToWorld(WorldToGrid(Vector3.zero)), 0.2f);
-        Gizmos.DrawSphere(GridToWorld(WorldToGrid(Vector3.one * 4)), 0.2f);
-        Gizmos.DrawSphere(GridToWorld(WorldToGrid(Vector3.one)), 0.2f);
+        Gizmos.color = GetComponent<MeshRenderer>() != null ? GetComponent<MeshRenderer>().sharedMaterial.color : Color.white;
         if (sources != null) {
             foreach (InfluenceSource source in sources) {
                 Gizmos.DrawSphere(source.transform.position, 0.1f);
@@ -104,9 +101,9 @@ public class InfluenceMap : MonoBehaviour {
     }
 
     public Vector2Int WorldToGrid(Vector3 point) {
-        var pos = point - origo;
-        int x = Mathf.FloorToInt(pos.x);
-        int y = Mathf.FloorToInt(pos.z);
+        var pos = point - origo;        
+        int x = Mathf.FloorToInt(pos.x / cellSize);
+        int y = Mathf.FloorToInt(pos.z / cellSize);
         return new Vector2Int(x, y);
     }
 
@@ -126,8 +123,6 @@ public class InfluenceMap : MonoBehaviour {
         for (int i = 0; i < layers; i++) {
             int l = (i + currentLayer) % layers;
             total += mapz[l][x, y] * layerInfluences[i];
-            if (!Mathf.Approximately(mapz[l][x, y], 0))
-                Debug.Log(mapz[l][x, y]);
         }
         return total;
     }
@@ -136,8 +131,6 @@ public class InfluenceMap : MonoBehaviour {
         for (int i = 0; i < width; ++i) {
             for (int j = 0; j < height; ++j) {
                 float c = GetInfluence(i, j);
-                if (!Mathf.Approximately(c, 0))
-                    Debug.Log(c);
                 tex.SetPixel(i, j, new Color(c, c, c, 0.5f));
             }
         }
@@ -164,19 +157,64 @@ public class InfluenceMap : MonoBehaviour {
     void InsertNewValues(InfluenceSource source, float[] neighborDiminish) {
         if (InBounds(WorldToGrid(source.transform.position))) {
             DFSAdd(source, 1, WorldToGrid(source.transform.position), new HashSet<Vector2Int>(), neighborDiminish, 0);
+            //BFSAdd(source, WorldToGrid(source.transform.position), neighborDiminish);
         }
     }
 
-    // Ignores the 4 adjacent neighbors
+    #region BFS
+
+    private struct NodeData {
+        public int iteration;
+        public float modifier;
+
+        public NodeData(int iteration, float modifier) {
+            this.iteration = iteration;
+            this.modifier = modifier;
+        }
+    }
+
+    void BFSAdd(InfluenceSource source, Vector2Int pos, float[] neighborDiminish) {
+        BFS(source.sourceValue, source.range, (node, data) => {
+            float value = source.GetDecayValue(source.range, data.iteration, source.sourceValue);
+            mapz[currentLayer][pos.x, pos.y] += value * data.modifier;
+        }, pos, neighborDiminish);
+    }
+
+    void BFS(float sourceValue, int maxIterations, Action<Vector2Int, NodeData> action, Vector2Int pos, float[] neighborDiminish) {
+        var frontier = new Queue<Vector2Int>();
+        var nodeData = new Dictionary<Vector2Int, NodeData>();
+        var visited = new HashSet<Vector2Int>();
+        frontier.Enqueue(pos);
+        nodeData.Add(pos, new NodeData(0, 1));
+        while (frontier.Count != 0) {
+            var current = frontier.Dequeue();
+            if (nodeData[current].iteration > maxIterations) {
+                continue;
+            }
+
+            action.Invoke(current, nodeData[current]);
+
+            foreach (var pair in Extensions.Zip(GetNeighbors(current), neighborDiminish)) {
+                if (InBounds(pair.Key) && !visited.Contains(pair.Key)) {
+                    frontier.Enqueue(pair.Key);
+                    nodeData[pair.Key] = new NodeData(nodeData[current].iteration + 1, pair.Value);
+                }
+            }
+            visited.Add(current);
+        }
+    }
+
+    #endregion BFS
+
     void DFSAdd(InfluenceSource source, float modifier, Vector2Int pos, HashSet<Vector2Int> visited, float[] neighborDiminish, int iteration) {
         if (iteration >= source.range) {
             return;
         } else {
             float value = source.GetDecayValue(source.range, iteration, source.sourceValue);
             mapz[currentLayer][pos.x, pos.y] += value * modifier;
+            visited.Add(pos);
             foreach (var pair in Extensions.Zip(GetNeighbors(pos), neighborDiminish)) {
                 if (InBounds(pair.Key) && !visited.Contains(pair.Key)) {
-                    visited.Add(pair.Key);
                     DFSAdd(source, pair.Value, pair.Key, visited, neighborDiminish, iteration + 1);
                 }
             }
