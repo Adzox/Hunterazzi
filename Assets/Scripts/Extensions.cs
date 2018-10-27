@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using UnityEngine;
 
 public static class Extensions {
 
@@ -22,5 +24,32 @@ public static class Extensions {
             }
         }
     }
+
+    #region Coroutine Join
+
+    private class WaitForAllShared {
+        public int done;
+    }
+
+    private static IEnumerator IncrementDone(MonoBehaviour mb, IEnumerator enumerator, WaitForAllShared shared) {
+        yield return mb.StartCoroutine(enumerator);
+        shared.done++;
+    }
+
+    public static IEnumerator WaitForAllParams(this MonoBehaviour mb, params IEnumerator[] enumerable) {
+        return mb.WaitForAll(enumerable);
+    }
+
+    public static IEnumerator WaitForAll(this MonoBehaviour mb, IEnumerable<IEnumerator> enumerable) {
+        WaitForAllShared shared = new WaitForAllShared();
+        int count = 0;
+        foreach (IEnumerator enumerator in enumerable) {
+            mb.StartCoroutine(IncrementDone(mb, enumerator, shared));
+            count++;
+        }
+        yield return new WaitUntil(() => shared.done == count);
+    }
+
+    #endregion
 }
 
