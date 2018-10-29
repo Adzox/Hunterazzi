@@ -33,7 +33,7 @@ public class PresenceSource : InfluenceSource {
     // Sound kinda like pos, but bigger stretch (radius)
     // Smell like below
     // Velocity is sudden increase near direct neighbors in direction of velocity, and quick decline from there!
-    public override float GetDecayValue(int maxIterations, int currentIteration, float startValue) {
-        return -(currentIteration - maxIterations) * (currentIteration + maxIterations) / (maxIterations * maxIterations / startValue);
+    public override float GetValue(float distance, float sourceValue, float maxDistance) {
+        return -(distance - maxDistance) * (distance + maxDistance) / (maxDistance * maxDistance / sourceValue);
     }
 }

@@ -13,18 +13,14 @@ public class InfluenceMap : MonoBehaviour {
     public Vector2 dimensions;
     private Vector3 origo;
 
-    private const float decay = 2;
+    public float decayPerSecond = 1;
 
     private List<InfluenceSource> sources = new List<InfluenceSource>();
 
-    [Range(1, 5)]
-    public int layers;
-    public float[] layerInfluences; 
-    private int currentLayer;
-
     int width;
     int height;
-    private float[][,] mapz;
+    private float[,] addMap;
+    private float[,] decayMap;
 
     Texture2D tex;
 
@@ -33,19 +29,14 @@ public class InfluenceMap : MonoBehaviour {
     public float updateFrequency = 30;
     private float updateTime;
 
-    private void OnValidate() {
-        if (layerInfluences.Length != layers) {
-            Array.Resize(ref layerInfluences, layers);
-        }
-    }
+    private const float zeroThreshold = 0.1f;
 
     void Start () {
         origo = transform.position - new Vector3(dimensions.x * transform.lossyScale.x, 0, dimensions.y * transform.lossyScale.z) / 2;
         width = Mathf.FloorToInt(dimensions.x / cellSize);
         height = Mathf.FloorToInt(dimensions.y / cellSize);
-        mapz = new float[layers][,];
-        currentLayer = 0;
-        mapz[currentLayer] = new float[width, height];
+        addMap = new float[width, height];
+        decayMap = new float[width, height];
         updateTime = 1 / updateFrequency;
 
         tex = new Texture2D(width, height);
@@ -86,13 +77,13 @@ public class InfluenceMap : MonoBehaviour {
 
     void SetInfluence(float influence, Vector2Int pos) {
         if (pos.x >= 0 && pos.x < width && pos.y >= 0 && pos.y < height) {
-            mapz[currentLayer][pos.x, pos.y] = influence;
+            addMap[pos.x, pos.y] = influence;
         }
     }
 
     void AddInfluence(float influence, Vector2Int pos) {
         if (pos.x >= 0 && pos.x < width && pos.y >= 0 && pos.y < height) {
-            mapz[currentLayer][pos.x, pos.y] += influence;
+            addMap[pos.x, pos.y] += influence;
         }
     }
 
@@ -119,12 +110,7 @@ public class InfluenceMap : MonoBehaviour {
     }
 
     private float GetInfluence(int x, int y) {
-        float total = 0;
-        for (int i = 0; i < layers; i++) {
-            int l = (i + currentLayer) % layers;
-            total += mapz[l][x, y] * layerInfluences[i];
-        }
-        return total;
+        return decayMap[x, y];
     }
 
     public void Display() {
@@ -139,16 +125,24 @@ public class InfluenceMap : MonoBehaviour {
 
     public IEnumerator UpdateMap() {
         while (true) {
-            currentLayer++;
-            if (currentLayer >= layers)
-                currentLayer = 0;
-            // Clear current layer
-            mapz[currentLayer] = new float[width, height];
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    if (!Mathf.Approximately(decayMap[x, y], 0)) {
+                        decayMap[x, y] -= Mathf.Sign(decayMap[x, y]) * decayPerSecond * updateTime;
+                        if (Mathf.Abs(decayMap[x, y]) <= zeroThreshold) {
+                            decayMap[x, y] = 0;
+                        }
+                    }
+                }
+            }
 
+            // Clear addition layer
+            addMap = new float[width, height];
             // Add values from InfluenceSources
             foreach (InfluenceSource source in sources) {
                 InsertNewValues(source, defaultNeighborDiminish);
             }
+
             Display();
             yield return new WaitForSeconds(updateTime);
         }
@@ -162,17 +156,14 @@ public class InfluenceMap : MonoBehaviour {
         }
     }
 
-    float PositionShapeValue(float distance, float sourceValue, float maxDistance) {
-        return -(distance - maxDistance) * (distance + maxDistance) / (maxDistance * maxDistance / sourceValue);
-    }
-
     void DFS(InfluenceSource source, Vector2Int startPos, Vector2Int pos, HashSet<Vector2Int> visited) {
         float distance = Vector2Int.Distance(startPos, pos);
         if (distance >= source.range) {
             return;
         } else {
             visited.Add(pos);
-            mapz[currentLayer][pos.x, pos.y] += PositionShapeValue(distance, source.sourceValue, source.range);
+            addMap[pos.x, pos.y] += source.GetValue(distance, source.sourceValue, source.range);
+            decayMap[pos.x, pos.y] = Mathf.Max(addMap[pos.x, pos.y], decayMap[pos.x, pos.y]);
             foreach (var neighbor in GetNeighbors(pos)) {
                 if (InBounds(neighbor) && !visited.Contains(neighbor)) {
                     DFS(source, startPos, neighbor, visited);
