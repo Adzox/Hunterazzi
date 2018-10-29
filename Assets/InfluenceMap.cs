@@ -8,7 +8,7 @@ public class InfluenceMap : MonoBehaviour {
 
     [Tooltip("The parent GameObject for all obstacles.")]
     // Replace with Navmesh!
-    public GameObject obstacles;
+    public ObstacleHeightMap obstacleHeights;
     public float cellSize;
     public Vector2 dimensions;
     private Vector3 origo;
@@ -21,6 +21,8 @@ public class InfluenceMap : MonoBehaviour {
     int height;
     private float[,] addMap;
     private float[,] decayMap;
+
+    private float[,] heightObstacleMap;
 
     Texture2D tex;
 
@@ -37,6 +39,7 @@ public class InfluenceMap : MonoBehaviour {
         height = Mathf.FloorToInt(dimensions.y / cellSize);
         addMap = new float[width, height];
         decayMap = new float[width, height];
+        heightObstacleMap = new float[width, height];
         updateTime = 1 / updateFrequency;
 
         tex = new Texture2D(width, height);
@@ -47,7 +50,18 @@ public class InfluenceMap : MonoBehaviour {
 
     private void OnDrawGizmosSelected() {
         origo = transform.position - new Vector3(dimensions.x * transform.lossyScale.x, 0, dimensions.y * transform.lossyScale.z) / 2;
+
+        width = Mathf.FloorToInt(dimensions.x / cellSize);
+        height = Mathf.FloorToInt(dimensions.y / cellSize);
+
         Gizmos.color = Color.black;
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                Gizmos.DrawSphere(GridToWorld(new Vector2Int(x, y)), 0.03f);
+            }
+        }
+
+        Gizmos.color = Color.yellow;
         Gizmos.DrawSphere(origo, 0.1f);
         Gizmos.color = GetComponent<MeshRenderer>() != null ? GetComponent<MeshRenderer>().sharedMaterial.color : Color.white;
         if (sources != null) {
@@ -102,6 +116,10 @@ public class InfluenceMap : MonoBehaviour {
         return new Vector3(pos.x * cellSize, 0, pos.y * cellSize) + origo;
     }
 
+    public Vector3 GridToWorld(int x, int y) {
+        return new Vector3(x * cellSize, 0, y * cellSize) + origo;
+    }
+
     public float GetInfluence(Vector3 point) {
         Vector2Int pos = WorldToGrid(point);
         if (!InBounds(pos))
@@ -150,14 +168,37 @@ public class InfluenceMap : MonoBehaviour {
     
     void InsertNewValues(InfluenceSource source, float[] neighborDiminish) {
         if (InBounds(WorldToGrid(source.transform.position))) {
-            var pos = WorldToGrid(source.transform.position);
-            var visited = new HashSet<Vector2Int>();
-            DFS(source, pos, pos, visited);
+            BFS(source);
         }
     }
 
-    void DFS(InfluenceSource source, Vector2Int startPos, Vector2Int pos, HashSet<Vector2Int> visited) {
-        float distance = Vector2Int.Distance(startPos, pos);
+    void BFS(InfluenceSource source) {
+        var startPos = WorldToGrid(source.transform.position);
+        var frontier = new Queue<Vector2Int>() { startPos };
+        var discovered = new HashSet<Vector2Int>() { startPos };
+        var distanceTo = new Dictionary<Vector2Int, float>() { { startPos, 0 } };
+
+        while (frontier.Count != 0) {
+            var pos = frontier.Dequeue();
+            float currentDistance = distanceTo[pos];
+
+            if (source.range > currentDistance) {
+
+                addMap[pos.x, pos.y] += source.GetValue(currentDistance, source.sourceValue, source.range);
+                decayMap[pos.x, pos.y] = Mathf.Max(addMap[pos.x, pos.y], decayMap[pos.x, pos.y]);
+
+                foreach (var neighbor in GetNeighbors(pos)) {
+                    if (InBounds(neighbor) && Mathf.Approximately(obstacleHeights.GetHeight(neighbor), 0) && ((distanceTo.ContainsKey(neighbor) && currentDistance + 1 < distanceTo[neighbor]) || !discovered.Contains(neighbor))) {
+                        discovered.Add(neighbor);
+                        frontier.Enqueue(neighbor);
+                        distanceTo[neighbor] = currentDistance + 1;
+                    }
+                }
+            }
+        }        
+    }
+
+    void DFS(InfluenceSource source, Vector2Int startPos, Vector2Int pos, HashSet<Vector2Int> visited, float distance) {
         if (distance >= source.range) {
             return;
         } else {
@@ -165,8 +206,8 @@ public class InfluenceMap : MonoBehaviour {
             addMap[pos.x, pos.y] += source.GetValue(distance, source.sourceValue, source.range);
             decayMap[pos.x, pos.y] = Mathf.Max(addMap[pos.x, pos.y], decayMap[pos.x, pos.y]);
             foreach (var neighbor in GetNeighbors(pos)) {
-                if (InBounds(neighbor) && !visited.Contains(neighbor)) {
-                    DFS(source, startPos, neighbor, visited);
+                if (InBounds(neighbor) && !visited.Contains(neighbor) && Mathf.Approximately(obstacleHeights.GetHeight(neighbor), 0)) {
+                    DFS(source, startPos, neighbor, visited, distance + Vector2Int.Distance(pos, neighbor));
                 }
             }
         }
