@@ -7,6 +7,7 @@ using UnityEngine;
 public class InfluenceMap : MonoBehaviour {
 
     [Tooltip("The parent GameObject for all obstacles.")]
+    // Replace with Navmesh!
     public GameObject obstacles;
     public float cellSize;
     public Vector2 dimensions;
@@ -14,7 +15,7 @@ public class InfluenceMap : MonoBehaviour {
 
     private const float decay = 2;
 
-    private List<InfluenceSource> sources;
+    private List<InfluenceSource> sources = new List<InfluenceSource>();
 
     [Range(1, 5)]
     public int layers;
@@ -27,14 +28,10 @@ public class InfluenceMap : MonoBehaviour {
 
     Texture2D tex;
 
-    // TODO: Used for testing visualization - should be removed
-    int testPos;
-
-
     private float[] defaultNeighborDiminish = { 1, 1, 1, 1, 1, 1, 1, 1 };
 
     public float updateFrequency = 30;
-    public float updateTime;
+    private float updateTime;
 
     private void OnValidate() {
         if (layerInfluences.Length != layers) {
@@ -42,35 +39,26 @@ public class InfluenceMap : MonoBehaviour {
         }
     }
 
-    // Use this for initialization
     void Start () {
-        origo = transform.position - new Vector3(dimensions.x, 0, dimensions.y) / 2;
+        origo = transform.position - new Vector3(dimensions.x * transform.lossyScale.x, 0, dimensions.y * transform.lossyScale.z) / 2;
         width = Mathf.FloorToInt(dimensions.x / cellSize);
         height = Mathf.FloorToInt(dimensions.y / cellSize);
         mapz = new float[layers][,];
         currentLayer = 0;
         mapz[currentLayer] = new float[width, height];
-        sources = new List<InfluenceSource>();
         updateTime = 1 / updateFrequency;
 
         tex = new Texture2D(width, height);
         GetComponent<Renderer>().material.mainTexture = tex;
         tex.filterMode = FilterMode.Point;
+        StartCoroutine("UpdateMap");
     }
 
-    void Update() {
-        if (Input.GetKeyDown("right")) testPos++;
-        if (Input.GetKeyDown("up")) {
-            AddInfluence(0.1f, new Vector2Int(testPos, testPos));
-            Display();
-        }
-    }
-
-    private void OnDrawGizmos() {
-        Gizmos.color = Color.red;
-        Vector3 origo = transform.position - new Vector3(dimensions.x, 0, dimensions.y) / 2;
-        Gizmos.DrawSphere(transform.position - new Vector3(dimensions.x, 0, dimensions.y) / 2, 0.1f);
-        Gizmos.color = Color.blue;
+    private void OnDrawGizmosSelected() {
+        origo = transform.position - new Vector3(dimensions.x * transform.lossyScale.x, 0, dimensions.y * transform.lossyScale.z) / 2;
+        Gizmos.color = Color.black;
+        Gizmos.DrawSphere(origo, 0.1f);
+        Gizmos.color = GetComponent<MeshRenderer>() != null ? GetComponent<MeshRenderer>().sharedMaterial.color : Color.white;
         if (sources != null) {
             foreach (InfluenceSource source in sources) {
                 Gizmos.DrawSphere(source.transform.position, 0.1f);
@@ -113,9 +101,9 @@ public class InfluenceMap : MonoBehaviour {
     }
 
     public Vector2Int WorldToGrid(Vector3 point) {
-        var pos = point - origo;
-        int x = Mathf.FloorToInt(pos.x);
-        int y = Mathf.FloorToInt(pos.z);
+        var pos = point - origo;        
+        int x = Mathf.FloorToInt(pos.x / cellSize);
+        int y = Mathf.FloorToInt(pos.z / cellSize);
         return new Vector2Int(x, y);
     }
 
@@ -131,7 +119,6 @@ public class InfluenceMap : MonoBehaviour {
     }
 
     private float GetInfluence(int x, int y) {
-        int current = currentLayer;
         float total = 0;
         for (int i = 0; i < layers; i++) {
             int l = (i + currentLayer) % layers;
@@ -162,34 +149,35 @@ public class InfluenceMap : MonoBehaviour {
             foreach (InfluenceSource source in sources) {
                 InsertNewValues(source, defaultNeighborDiminish);
             }
+            Display();
             yield return new WaitForSeconds(updateTime);
         }
     }
     
     void InsertNewValues(InfluenceSource source, float[] neighborDiminish) {
         if (InBounds(WorldToGrid(source.transform.position))) {
-            DFSAdd(source.sourceValue, 1, WorldToGrid(source.transform.position), new HashSet<Vector2Int>(), neighborDiminish, 0, source.range);
+            var pos = WorldToGrid(source.transform.position);
+            var visited = new HashSet<Vector2Int>();
+            DFS(source, pos, pos, visited);
         }
     }
 
-    void DFSAdd(float startValue, float modifier, Vector2Int pos, HashSet<Vector2Int> visited, float[] neighborDiminish, int iteration, int maxIterations) {
-        if (iteration >= maxIterations) {
+    float PositionShapeValue(float distance, float sourceValue, float maxDistance) {
+        return -(distance - maxDistance) * (distance + maxDistance) / (maxDistance * maxDistance / sourceValue);
+    }
+
+    void DFS(InfluenceSource source, Vector2Int startPos, Vector2Int pos, HashSet<Vector2Int> visited) {
+        float distance = Vector2Int.Distance(startPos, pos);
+        if (distance >= source.range) {
             return;
         } else {
-            float value = GetValue(maxIterations, iteration, startValue);
-            mapz[currentLayer][pos.x, pos.y] += value * modifier;
-            foreach (var pair in Extensions.Zip(GetNeighbors(pos), neighborDiminish)) {
-                if (InBounds(pair.Key) && !visited.Contains(pair.Key)) {
-                    visited.Add(pair.Key);
-                    DFSAdd(startValue, pair.Value, pair.Key, visited, neighborDiminish, iteration + 1, maxIterations);
+            visited.Add(pos);
+            mapz[currentLayer][pos.x, pos.y] += PositionShapeValue(distance, source.sourceValue, source.range);
+            foreach (var neighbor in GetNeighbors(pos)) {
+                if (InBounds(neighbor) && !visited.Contains(neighbor)) {
+                    DFS(source, startPos, neighbor, visited);
                 }
             }
         }
-    }
-
-    // (x - c)(x + c)/d, x is current, c is max, d is height
-    // Consider using exp here for point-based data (positions?)
-    float GetValue(int maxIterations, int currentIteration, float startValue) {
-        return (currentIteration - maxIterations) * (currentIteration + maxIterations) / startValue;
     }
 }

@@ -322,7 +322,7 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RenderingLayerMask: 4294967295
   m_Materials:
-  - {fileID: 2100000, guid: dac43d4f27ba3054a8395d20d7a33b87, type: 2}
+  - {fileID: 2100000, guid: adb8d9c5c4657344593b602df8ce1b52, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -381,7 +381,6 @@ MonoBehaviour:
   - 1
   - 0.2
   updateFrequency: 30
-  updateTime: 0
 --- !u!1 &1657326574
 GameObject:
   m_ObjectHideFlags: 0

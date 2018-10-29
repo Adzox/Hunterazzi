@@ -5,6 +5,7 @@ public abstract class InfluenceSource : MonoBehaviour {
 
     public float sourceValue;
     public int range;
+    public InfluenceMap parentMap;
 
-    protected abstract float GetDecay(float oldValue);
+    public abstract float GetDecayValue(int maxIter, int currentIter, float startVal);
 }
