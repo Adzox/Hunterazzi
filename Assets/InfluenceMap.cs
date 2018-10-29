@@ -156,66 +156,26 @@ public class InfluenceMap : MonoBehaviour {
     
     void InsertNewValues(InfluenceSource source, float[] neighborDiminish) {
         if (InBounds(WorldToGrid(source.transform.position))) {
-            DFSAdd(source, 1, WorldToGrid(source.transform.position), new HashSet<Vector2Int>(), neighborDiminish, 0);
-            //BFSAdd(source, WorldToGrid(source.transform.position), neighborDiminish);
+            var pos = WorldToGrid(source.transform.position);
+            var visited = new HashSet<Vector2Int>();
+            DFS(source, pos, pos, visited);
         }
     }
 
-    #region BFS
-
-    private struct NodeData {
-        public int iteration;
-        public float modifier;
-
-        public NodeData(int iteration, float modifier) {
-            this.iteration = iteration;
-            this.modifier = modifier;
-        }
+    float PositionShapeValue(float distance, float sourceValue, float maxDistance) {
+        return -(distance - maxDistance) * (distance + maxDistance) / (maxDistance * maxDistance / sourceValue);
     }
 
-    void BFSAdd(InfluenceSource source, Vector2Int pos, float[] neighborDiminish) {
-        BFS(source.sourceValue, source.range, (node, data) => {
-            float value = source.GetDecayValue(source.range, data.iteration, source.sourceValue);
-            mapz[currentLayer][pos.x, pos.y] += value * data.modifier;
-        }, pos, neighborDiminish);
-    }
-
-    void BFS(float sourceValue, int maxIterations, Action<Vector2Int, NodeData> action, Vector2Int pos, float[] neighborDiminish) {
-        var frontier = new Queue<Vector2Int>();
-        var nodeData = new Dictionary<Vector2Int, NodeData>();
-        var visited = new HashSet<Vector2Int>();
-        frontier.Enqueue(pos);
-        nodeData.Add(pos, new NodeData(0, 1));
-        while (frontier.Count != 0) {
-            var current = frontier.Dequeue();
-            if (nodeData[current].iteration > maxIterations) {
-                continue;
-            }
-
-            action.Invoke(current, nodeData[current]);
-
-            foreach (var pair in Extensions.Zip(GetNeighbors(current), neighborDiminish)) {
-                if (InBounds(pair.Key) && !visited.Contains(pair.Key)) {
-                    frontier.Enqueue(pair.Key);
-                    nodeData[pair.Key] = new NodeData(nodeData[current].iteration + 1, pair.Value);
-                }
-            }
-            visited.Add(current);
-        }
-    }
-
-    #endregion BFS
-
-    void DFSAdd(InfluenceSource source, float modifier, Vector2Int pos, HashSet<Vector2Int> visited, float[] neighborDiminish, int iteration) {
-        if (iteration >= source.range) {
+    void DFS(InfluenceSource source, Vector2Int startPos, Vector2Int pos, HashSet<Vector2Int> visited) {
+        float distance = Vector2Int.Distance(startPos, pos);
+        if (distance >= source.range) {
             return;
         } else {
-            float value = source.GetDecayValue(source.range, iteration, source.sourceValue);
-            mapz[currentLayer][pos.x, pos.y] += value * modifier;
             visited.Add(pos);
-            foreach (var pair in Extensions.Zip(GetNeighbors(pos), neighborDiminish)) {
-                if (InBounds(pair.Key) && !visited.Contains(pair.Key)) {
-                    DFSAdd(source, pair.Value, pair.Key, visited, neighborDiminish, iteration + 1);
+            mapz[currentLayer][pos.x, pos.y] += PositionShapeValue(distance, source.sourceValue, source.range);
+            foreach (var neighbor in GetNeighbors(pos)) {
+                if (InBounds(neighbor) && !visited.Contains(neighbor)) {
+                    DFS(source, startPos, neighbor, visited);
                 }
             }
         }
