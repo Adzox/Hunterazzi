@@ -29,6 +29,44 @@ public static class Extensions {
         queue.Enqueue(item);
     }
 
+    public static void Add(this Texture2D texture2D, Texture2D other, float blendFactor) {
+        if (texture2D.width == other.width && texture2D.height == other.height) {
+            float blend = Mathf.Clamp01(blendFactor);
+            int width = texture2D.width;
+            int height = texture2D.height;
+            Color[] colors = new Color[texture2D.width * texture2D.height];
+            for (int x = 0; x < width; ++x) {
+                for (int y = 0; y < height; ++y) {
+                    colors[x + y * width] = texture2D.GetPixel(x, y) * (1 - blend) + other.GetPixel(x, y) * blend;
+                }
+            }
+            texture2D.SetPixels(colors);
+        }
+    }
+
+    public static void Mult(this Texture2D texture2D, Texture2D other, float blendFactor) {
+        if (texture2D.width == other.width && texture2D.height == other.height) {
+            float blend = Mathf.Clamp01(blendFactor);
+            int width = texture2D.width;
+            int height = texture2D.height;
+            Color[] colors = new Color[texture2D.width * texture2D.height];
+            for (int x = 0; x < width; ++x) {
+                for (int y = 0; y < height; ++y) {
+                    colors[x + y * width] = texture2D.GetPixel(x, y) * other.GetPixel(x, y);
+                }
+            }
+            texture2D.SetPixels(colors);
+        }
+    }
+
+    public static void AddPixel(this Texture2D texture2D, int x, int y, Color color) {
+        texture2D.SetPixel(x, y, (texture2D.GetPixel(x, y) + color) / 2);
+    }
+
+    public static void MultPixel(this Texture2D texture2D, int x, int y, Color color) {
+        texture2D.SetPixel(x, y, texture2D.GetPixel(x, y) * color / 2);
+    }
+
     #region Coroutine Join
 
     private class WaitForAllShared {

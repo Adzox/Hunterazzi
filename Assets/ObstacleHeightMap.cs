@@ -4,92 +4,70 @@ using UnityEngine;
 
 public class ObstacleHeightMap : MonoBehaviour {
 
-    public float cellSize;
-    public Vector2 dimensions;
-    private Vector3 origo;
-
-    int width;
-    int height;
+    public SharedGrid grid;
+    public float visualizedMaxHeight;
     private float[,] heightObstacleMap;
 
     void Start() {
-        origo = transform.position - new Vector3(dimensions.x * transform.lossyScale.x, 0, dimensions.y * transform.lossyScale.z) / 2;
-        width = Mathf.FloorToInt(dimensions.x / cellSize);
-        height = Mathf.FloorToInt(dimensions.y / cellSize);
-        heightObstacleMap = new float[width, height];
+        if (grid == null)
+            Debug.LogError("Missing SharedGrid instance!");
+        heightObstacleMap = new float[grid.GetWidth(), grid.GetHeight()];
 
         foreach (Transform child in transform) {
-            var bounds = child.GetComponent<Renderer>().bounds;
-            // Clamp bounds x and z value to match grid.
-            var min = bounds.min;
-            min.x = Mathf.FloorToInt(min.x / cellSize) * cellSize;
-            min.z = Mathf.FloorToInt(min.z / cellSize) * cellSize;
-            var max = bounds.max;
-            max.x = Mathf.FloorToInt(max.x / cellSize) * cellSize;
-            max.z = Mathf.FloorToInt(max.z / cellSize) * cellSize;
-            bounds.SetMinMax(min, max);
+            var bounds = grid.Project(child.GetComponent<Renderer>().bounds);
 
-            for (int x = 0; x < width; x++) {
-                for (int y = 0; y < height; y++) {
-                    if (bounds.Contains(GridToWorld(x, y)) && bounds.Contains(GridToWorld(x + 1, y + 1))) {
-                        heightObstacleMap[x, y] = bounds.size.y;
-                    }
+            grid.ForEachCell((x, y) => {
+                if (bounds.Contains(grid.GridToWorld(x, y)) && bounds.Contains(grid.GridToWorld(x + 1, y + 1))) {
+                    heightObstacleMap[x, y] = bounds.size.y;
                 }
-            }
+            });
         }
+    }
+
+    private void OnValidate() {
+        visualizedMaxHeight = Mathf.Clamp(visualizedMaxHeight, 0, float.MaxValue);
     }
 
     private void OnDrawGizmosSelected() {
-        origo = transform.position - new Vector3(dimensions.x * transform.lossyScale.x, 0, dimensions.y * transform.lossyScale.z) / 2;
-
-        width = Mathf.FloorToInt(dimensions.x / cellSize);
-        height = Mathf.FloorToInt(dimensions.y / cellSize);
-
-        Gizmos.color = Color.black;
-        for (int x = 0; x < width; x++) {
-            for (int y = 0; y < height; y++) {
-                Gizmos.DrawSphere(GridToWorld(new Vector2Int(x, y)), 0.03f);
-            }
-        }
-
-        Gizmos.color = Color.cyan;
+        if (grid == null)
+            return;
+        var baseColor = Color.white;
         if (heightObstacleMap != null) {
-            for (int x = 0; x < width; x++) {
-                for (int y = 0; y < height; y++) {
-                    if (heightObstacleMap[x, y] >= 0.1f)
-                        Gizmos.DrawWireSphere(GridToWorld(new Vector2Int(x, y)), 0.031f);
-                }
-            }
+            grid.ForEachCell((x, y) => {
+                if (heightObstacleMap[x, y] > 0) {
+                    var c = heightObstacleMap[x, y] / visualizedMaxHeight;
+                    Gizmos.color = Color.Lerp(new Color(c, c, c), baseColor, 0.5f);
+                    Gizmos.DrawWireSphere(grid.GridToWorld(new Vector2Int(x, y)), 0.031f);
+                } 
+            });
         }
+    }
 
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawSphere(origo, 0.1f);
+    public void AddHeight(int x, int y, float height) {
+        if (grid.InBounds(x, y)) {
+            heightObstacleMap[x, y] = heightObstacleMap[x, y] + height < 0 ? 
+                                        heightObstacleMap[x, y] = 0 : 
+                                        heightObstacleMap[x, y] + height;  
+        }
+    }
+
+    public void RemoveHeight(int x, int y, float height) {
+        if (grid.InBounds(x, y)) {
+            heightObstacleMap[x, y] = heightObstacleMap[x, y] - height < 0 ?
+                                        heightObstacleMap[x, y] = 0 :
+                                        heightObstacleMap[x, y] - height;
+        }
     }
 
     public float GetHeight(int x, int y) {
-        return heightObstacleMap[x, y];
+        if (grid.InBounds(x, y))
+            return heightObstacleMap[x, y];
+        return 0;
     }
 
     public float GetHeight(Vector2Int pos) {
-        return heightObstacleMap[pos.x, pos.y];
-    }
-
-    public bool InBounds(Vector2Int pos) {
-        return pos.x >= 0 && pos.x < width && pos.y >= 0 && pos.y < height;
-    }
-
-    public Vector2Int WorldToGrid(Vector3 point) {
-        var pos = point - origo;
-        int x = Mathf.FloorToInt(pos.x / cellSize);
-        int y = Mathf.FloorToInt(pos.z / cellSize);
-        return new Vector2Int(x, y);
-    }
-
-    public Vector3 GridToWorld(Vector2Int pos) {
-        return new Vector3(pos.x * cellSize, 0, pos.y * cellSize) + origo;
-    }
-
-    public Vector3 GridToWorld(int x, int y) {
-        return new Vector3(x * cellSize, 0, y * cellSize) + origo;
+        if (grid.InBounds(pos))
+            return heightObstacleMap[pos.x, pos.y];
+        return 0;
     }
 }
