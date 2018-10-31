@@ -37,21 +37,12 @@ public static class Extensions {
             Color[] colors = new Color[texture2D.width * texture2D.height];
             for (int x = 0; x < width; ++x) {
                 for (int y = 0; y < height; ++y) {
-                    colors[x + y * width] = texture2D.GetPixel(x, y) * (1 - blend) + other.GetPixel(x, y) * blend;
-                }
-            }
-            texture2D.SetPixels(colors);
-        }
-    }
-
-    public static void Mult(this Texture2D texture2D, Texture2D other) {
-        if (texture2D.width == other.width && texture2D.height == other.height) {
-            int width = texture2D.width;
-            int height = texture2D.height;
-            Color[] colors = new Color[texture2D.width * texture2D.height];
-            for (int x = 0; x < width; ++x) {
-                for (int y = 0; y < height; ++y) {
-                    colors[x + y * width] = texture2D.GetPixel(x, y) * other.GetPixel(x, y);
+                    float alpha = texture2D.GetPixel(x, y).a;
+                    if (Mathf.Approximately(alpha, 0)) {
+                        colors[x + y * width] = other.GetPixel(x, y);
+                    } else {
+                        colors[x + y * width] = texture2D.GetPixel(x, y) * (1 - blend) + other.GetPixel(x, y) * blend;
+                    }
                 }
             }
             texture2D.SetPixels(colors);
