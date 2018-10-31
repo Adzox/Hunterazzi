@@ -113,7 +113,7 @@ public class SharedGrid : MonoBehaviour {
         }
     }
 
-    IEnumerable<Vector2Int> GetNeighbors8(Vector2Int pos) {
+    public static IEnumerable<Vector2Int> GetNeighbors8(Vector2Int pos) {
         return new List<Vector2Int>() {
             new Vector2Int(pos.x - 1, pos.y + 1), new Vector2Int(pos.x, pos.y + 1), new Vector2Int(pos.x + 1, pos.y + 1),
             new Vector2Int(pos.x - 1, pos.y),                                       new Vector2Int(pos.x + 1, pos.y),
@@ -121,7 +121,7 @@ public class SharedGrid : MonoBehaviour {
         };
     }
 
-    IEnumerable<Vector2Int> GetNeighbors4(Vector2Int pos) {
+    public static IEnumerable<Vector2Int> GetNeighbors4(Vector2Int pos) {
         return new List<Vector2Int>() {
                                                 new Vector2Int(pos.x, pos.y + 1),
             new Vector2Int(pos.x - 1, pos.y),                                       new Vector2Int(pos.x + 1, pos.y),

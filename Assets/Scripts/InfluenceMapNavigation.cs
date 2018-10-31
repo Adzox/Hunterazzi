@@ -28,7 +28,7 @@ public class InfluenceMapNavigation {
             float currentDistance = distanceTo[pos];
 
             if (searchDist > currentDistance) {
-                foreach (var n in map.GetNeighbors(pos)) {
+                foreach (var n in SharedGrid.GetNeighbors8(pos)) {
                     if (map.InBounds(n)) {
                         float distToN = currentDistance + Vector2Int.Distance(pos, n);
                         if (map.GetInfluence(n.x, n.y) >= minInfluence &&

@@ -44,9 +44,8 @@ public static class Extensions {
         }
     }
 
-    public static void Mult(this Texture2D texture2D, Texture2D other, float blendFactor) {
+    public static void Mult(this Texture2D texture2D, Texture2D other) {
         if (texture2D.width == other.width && texture2D.height == other.height) {
-            float blend = Mathf.Clamp01(blendFactor);
             int width = texture2D.width;
             int height = texture2D.height;
             Color[] colors = new Color[texture2D.width * texture2D.height];
