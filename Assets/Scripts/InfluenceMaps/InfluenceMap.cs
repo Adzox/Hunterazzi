@@ -94,7 +94,8 @@ public class InfluenceMap : MonoBehaviour {
     public void Display() {
         grid.ForEachCell((x, y) => {
             float c = GetInfluence(x, y);
-            tex.SetPixel(x, y, new Color(c / visualizedMaxValue, c / visualizedMaxValue, c / visualizedMaxValue, 0.5f));
+            float a = Mathf.Approximately(c, 0) ? 0 : 0.5f;
+            tex.SetPixel(x, y, new Color(c / visualizedMaxValue, c / visualizedMaxValue, c / visualizedMaxValue, a));
         });
         tex.Apply();
     }
