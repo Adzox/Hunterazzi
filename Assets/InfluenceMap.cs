@@ -63,7 +63,7 @@ public class InfluenceMap : MonoBehaviour {
         sources.Remove(source);
     }
 
-    IEnumerable<Vector2Int> GetNeighbors(Vector2Int pos) {
+    public IEnumerable<Vector2Int> GetNeighbors(Vector2Int pos) {
         return new List<Vector2Int>() {
             new Vector2Int(pos.x - 1, pos.y + 1), new Vector2Int(pos.x, pos.y + 1), new Vector2Int(pos.x + 1, pos.y + 1),
             new Vector2Int(pos.x - 1, pos.y),                                       new Vector2Int(pos.x + 1, pos.y),
@@ -90,7 +90,7 @@ public class InfluenceMap : MonoBehaviour {
         return GetInfluence(pos.x, pos.y);
     }
 
-    private float GetInfluence(int x, int y) {
+    public float GetInfluence(int x, int y) {
         return decayMap[x, y];
     }
 
