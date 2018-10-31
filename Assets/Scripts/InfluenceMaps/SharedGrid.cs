@@ -51,12 +51,20 @@ public class SharedGrid : MonoBehaviour {
         return new Vector2Int(x, y);
     }
 
-    public Vector3 GridToWorld(Vector2Int pos) {
-        return new Vector3(pos.x * cellSize, 0, pos.y * cellSize) + origo;
-    }
-
     public Vector3 GridToWorld(int x, int y) {
         return new Vector3(x * cellSize, 0, y * cellSize) + origo;
+    }
+
+    public Vector3 GridToWorld(Vector2Int pos) {
+        return GridToWorld(pos.x, pos.y);
+    }
+
+    public Vector3 GridToCenterWorld(int x, int y) {
+        return new Vector3(x * cellSize + cellSize / 2, 0, y * cellSize + cellSize / 2) + origo;
+    }
+
+    public Vector3 GridToCenterWorld(Vector2Int pos) {
+        return GridToCenterWorld(pos.x, pos.y);
     }
 
     public float GetCellSize() {
