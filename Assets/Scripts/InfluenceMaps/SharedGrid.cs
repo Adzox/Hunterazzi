@@ -23,7 +23,7 @@ public class SharedGrid : MonoBehaviour {
         origo = transform.position - new Vector3(dimensions.x * transform.lossyScale.x, 0, dimensions.y * transform.lossyScale.z) / 2;
 
         width = Mathf.FloorToInt(dimensions.x * transform.lossyScale.x / cellSize);
-        height = Mathf.FloorToInt(dimensions.y * transform.lossyScale.x / cellSize);
+        height = Mathf.FloorToInt(dimensions.y * transform.lossyScale.z / cellSize);
 
         Gizmos.color = Color.black;
         for (int x = 0; x < width; x++) {

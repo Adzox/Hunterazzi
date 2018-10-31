@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using UnityEngine;
 
 public class InfluenceMap : MonoBehaviour {
@@ -35,7 +36,7 @@ public class InfluenceMap : MonoBehaviour {
         tex = new Texture2D(grid.GetWidth(), grid.GetHeight());
         GetComponent<Renderer>().material.mainTexture = tex;
         tex.filterMode = FilterMode.Point;
-        StartCoroutine("UpdateMap");
+        StartCoroutine("ParallelUpdateMap"); // ACTUALLY BETTER TO RUN IN PARALLEL!
     }
 
     private void OnValidate() {
@@ -112,8 +113,9 @@ public class InfluenceMap : MonoBehaviour {
             // Clear addition layer
             addMap = new float[grid.GetWidth(), grid.GetHeight()];
             // Add values from InfluenceSources
+
             foreach (InfluenceSource source in sources) {
-                InsertNewValues(source, defaultNeighborDiminish);
+                InsertNewValues(source);
             }
 
             Display();
@@ -121,7 +123,7 @@ public class InfluenceMap : MonoBehaviour {
         }
     }
     
-    void InsertNewValues(InfluenceSource source, float[] neighborDiminish) {
+    void InsertNewValues(InfluenceSource source) {
         grid.BFS(grid.ProjectGridPos(source.GetComponentInChildren<Renderer>().bounds), source.range, (pos, it) => {
             addMap[pos.x, pos.y] += source.GetValue(it, source.sourceValue, source.range);
             decayMap[pos.x, pos.y] = Mathf.Max(addMap[pos.x, pos.y], decayMap[pos.x, pos.y]);
@@ -129,4 +131,68 @@ public class InfluenceMap : MonoBehaviour {
             return Mathf.Approximately(obstacleHeights.GetHeight(neighbor), 0);
         });
     }
+
+    #region Parallel
+
+    private int completed;
+
+    private class ThreadData {
+        public InfluenceSource source;
+        public Bounds bounds;
+    }
+
+    public IEnumerator ParallelUpdateMap() {
+        while (true) {
+            grid.ForEachCell((x, y) => {
+                if (!Mathf.Approximately(decayMap[x, y], 0)) {
+                    decayMap[x, y] -= Mathf.Sign(decayMap[x, y]) * decayPerSecond * updateTime;
+                    if (Mathf.Abs(decayMap[x, y]) <= zeroThreshold) {
+                        decayMap[x, y] = 0;
+                    }
+                }
+            });
+
+            // Clear addition layer
+            addMap = new float[grid.GetWidth(), grid.GetHeight()];
+            // Add values from InfluenceSources
+
+            completed = 0;
+            foreach (var source in sources) {
+                ThreadData data = new ThreadData();
+                data.source = source;
+                data.bounds = source.GetComponentInChildren<Renderer>().bounds;
+                ThreadPool.QueueUserWorkItem(new WaitCallback(InsertNewValuesParallel), data);
+            }
+
+            yield return new WaitUntil(() => completed >= sources.Count);
+
+            Display();
+            yield return new WaitForSeconds(updateTime);
+        }
+    }
+
+    static float Add(ref float location1, float value) {
+        float newCurrentValue = location1; // non-volatile read, so may be stale
+        while (true) {
+            float currentValue = newCurrentValue;
+            float newValue = currentValue + value;
+            newCurrentValue = Interlocked.CompareExchange(ref location1, newValue, currentValue);
+            if (newCurrentValue == currentValue)
+                return newValue;
+        }
+    }
+
+    void InsertNewValuesParallel(object obj) {
+        ThreadData data = obj as ThreadData;
+        InfluenceSource source = data.source;
+        grid.BFS(grid.ProjectGridPos(data.bounds), source.range, (pos, it) => {
+            Add(ref addMap[pos.x, pos.y], source.GetValue(it, source.sourceValue, source.range));
+            Interlocked.Exchange(ref decayMap[pos.x, pos.y], Mathf.Max(addMap[pos.x, pos.y], decayMap[pos.x, pos.y]));
+        }, (neighbor) => {
+            return Mathf.Approximately(obstacleHeights.GetHeight(neighbor), 0);
+        });
+        Interlocked.Increment(ref completed);
+    }
+
+    #endregion Parallel
 }
