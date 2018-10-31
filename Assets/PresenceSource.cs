@@ -28,12 +28,9 @@ public class PresenceSource : InfluenceSource {
             parentMap.RemoveInfluenceSource(this);
     }
 
-    // (x - c)(x + c)/(c*c/d), x is current, c is max, d is height
-    // Consider using exp here for point-based data (positions?)
-    // Sound kinda like pos, but bigger stretch (radius)
-    // Smell like below
-    // Velocity is sudden increase near direct neighbors in direction of velocity, and quick decline from there!
     public override float GetValue(float distance, float sourceValue, float maxDistance) {
-        return -(distance - maxDistance) * (distance + maxDistance) / (maxDistance * maxDistance / sourceValue);
+        return (1 / (maxDistance * maxDistance)) * sourceValue * (distance - maxDistance) * (distance - maxDistance);
+        //return Mathf.Exp(-0.5f*distance + Mathf.Log(sourceValue));
+        //return -(distance - maxDistance) * (distance + maxDistance) / (maxDistance * maxDistance / sourceValue);
     }
 }
