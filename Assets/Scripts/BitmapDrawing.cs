@@ -76,6 +76,18 @@ namespace ProtoTurtle.BitmapDrawing {
             Circle(texture, x, y, radius, color, true);
         }
 
+        public static void DrawFilledCircle(this Texture2D texture, Vector2Int origin, int radius, Color color) {
+            int r2 = radius * radius;
+            int area = r2 << 2;
+            int rr = radius << 1;
+
+            for (int i = 0; i < area; i++) {
+                var pos = new Vector2Int((i % rr) - radius, (i / rr) - radius);
+                float distance = Vector2Int.Distance(origin, pos);
+                if (pos.x * pos.x + pos.y * pos.y <= r2)
+                    texture.SetPixel(origin.x + pos.x, origin.y + pos.y, Color.Lerp(Color.clear, color, distance/radius));
+            }
+        }
 
         private static void Circle(Texture2D texture, int x, int y, int radius, Color color, bool filled = false) {
             int cx = radius;
