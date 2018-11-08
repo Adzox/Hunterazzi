@@ -26,6 +26,9 @@ public class InfluenceMap : MonoBehaviour {
 
     private const float zeroThreshold = 0.1f;
 
+    public delegate void UpdateDelegate();
+    public UpdateDelegate UpdateMapDelegates;
+
     void Start () {
         if (grid == null)
             Debug.LogError("Missing SharedGrid instance!");
@@ -167,6 +170,7 @@ public class InfluenceMap : MonoBehaviour {
             yield return new WaitUntil(() => completed >= sources.Count);
 
             Display();
+            UpdateMapDelegates();
             yield return new WaitForSeconds(updateTime);
         }
     }
