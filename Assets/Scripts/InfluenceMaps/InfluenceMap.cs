@@ -1,6 +1,4 @@
-﻿using ProtoTurtle.BitmapDrawing;
-using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -201,8 +199,28 @@ public class InfluenceMap : MonoBehaviour {
     void InsertNewValuesParallel(object obj) {
         ThreadData data = obj as ThreadData;
         InfluenceSource source = data.source;
+
+        // Get middle point for angle calculation
+        var middle = new Vector2Int();
+        int count = 0;
+        foreach (var pos in grid.ProjectGridPos(data.bounds)) {
+            middle += pos;
+            count++;
+        }
+        middle.x /= count;
+        middle.y /= count;
+        
+        var projected = Vector3.ProjectOnPlane(source.sourceDirection, Vector3.up);
+        var onPlane = new Vector2(projected.x, projected.z);
+
         grid.BFS(grid.ProjectGridPos(data.bounds), source.range, (pos, it) => {
-            Add(ref addMap[pos.x, pos.y], source.GetValue(it, source.sourceValue, source.range));
+            // 1 if same direction, 0 if completely other direction! Linear in between!
+            float angleCalc = 1;
+            if (onPlane == Vector2.zero) {
+                angleCalc = 1 - Vector2.Angle(onPlane, middle + pos) / 180;
+            }
+
+            Add(ref addMap[pos.x, pos.y], source.GetValue(it, source.sourceValue, source.range) * angleCalc);
             Interlocked.Exchange(ref decayMap[pos.x, pos.y], Mathf.Max(addMap[pos.x, pos.y], decayMap[pos.x, pos.y]));
         }, (neighbor) => {
             return Mathf.Approximately(obstacleHeights.GetHeight(neighbor), 0);

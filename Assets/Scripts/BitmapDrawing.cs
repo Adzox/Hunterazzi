@@ -83,6 +83,7 @@ namespace ProtoTurtle.BitmapDrawing {
 
             for (int i = 0; i < area; i++) {
                 var pos = new Vector2Int((i % rr) - radius, (i / rr) - radius);
+                // Is point BFS-accessible (with respect to obstacles)
                 float distance = Vector2Int.Distance(origin, pos);
                 if (pos.x * pos.x + pos.y * pos.y <= r2)
                     texture.SetPixel(origin.x + pos.x, origin.y + pos.y, Color.Lerp(Color.clear, color, distance/radius));

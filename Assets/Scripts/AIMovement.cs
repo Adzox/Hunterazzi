@@ -28,4 +28,8 @@ public class AIMovement : MonoBehaviour {
         transform.position = Vector3.MoveTowards(transform.position, map.grid.GridToWorld(nextPos), speed * Time.deltaTime);
 		
 	}
+
+    public Vector3 GetVelocity() {
+        return (transform.position + map.grid.GridToWorld(nextPos)).normalized * speed;
+    }
 }
