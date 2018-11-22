@@ -1,6 +1,4 @@
-﻿using ProtoTurtle.BitmapDrawing;
-using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -18,7 +16,7 @@ public class InfluenceMap : MonoBehaviour {
     private float[,] decayMap;
     private List<InfluenceSource> sources = new List<InfluenceSource>();
 
-    Texture2D tex;
+    internal Texture2D tex;
 
     private float[] defaultNeighborDiminish = { 1, 1, 1, 1, 1, 1, 1, 1 };
 
@@ -29,17 +27,22 @@ public class InfluenceMap : MonoBehaviour {
     public delegate void UpdateDelegate();
     public UpdateDelegate UpdateMapDelegates;
 
+    internal bool standalone = true;
+
     void Start () {
         if (grid == null)
             Debug.LogError("Missing SharedGrid instance!");
+
         addMap = new float[grid.GetWidth(), grid.GetHeight()];
         decayMap = new float[grid.GetWidth(), grid.GetHeight()];
         updateTime = 1 / updateFrequency;
 
         tex = new Texture2D(grid.GetWidth(), grid.GetHeight());
-        GetComponent<Renderer>().material.mainTexture = tex;
+        if (standalone)
+            GetComponent<Renderer>().material.mainTexture = tex;
         tex.filterMode = FilterMode.Point;
-        StartCoroutine("ParallelUpdateMap"); // ACTUALLY BETTER TO RUN IN PARALLEL!
+        if (standalone)
+            StartCoroutine("ParallelUpdateMap"); // ACTUALLY BETTER TO RUN IN PARALLEL!
     }
 
     private void OnValidate() {
@@ -71,13 +74,7 @@ public class InfluenceMap : MonoBehaviour {
         return grid.InBounds(pos);
     }
 
-    void SetInfluence(float influence, Vector2Int pos) {
-        if (grid.InBounds(pos)) {
-            addMap[pos.x, pos.y] = influence;
-        }
-    }
-
-    void AddInfluence(float influence, Vector2Int pos) {
+    public void AddInfluence(float influence, Vector2Int pos) {
         if (grid.InBounds(pos)) {
             addMap[pos.x, pos.y] += influence;
         }
@@ -97,30 +94,36 @@ public class InfluenceMap : MonoBehaviour {
     public void Display() {
         grid.ForEachCell((x, y) => {
             float c = GetInfluence(x, y);
-            tex.SetPixel(x, y, new Color(c / visualizedMaxValue, c / visualizedMaxValue, c / visualizedMaxValue, 0.5f));
+            float a = Mathf.Approximately(c, 0) ? 0 : 1f;
+            tex.SetPixel(x, y, new Color(c / visualizedMaxValue, c / visualizedMaxValue, c / visualizedMaxValue, a));
         });
         tex.Apply();
     }
 
+    #region Sequential
+
+    public void UpdateInfluences() {
+        grid.ForEachCell((x, y) => {
+            if (!Mathf.Approximately(decayMap[x, y], 0)) {
+                decayMap[x, y] -= Mathf.Sign(decayMap[x, y]) * decayPerSecond * updateTime;
+                if (Mathf.Abs(decayMap[x, y]) <= zeroThreshold) {
+                    decayMap[x, y] = 0;
+                }
+            }
+        });
+
+        // Clear addition layer
+        addMap = new float[grid.GetWidth(), grid.GetHeight()];
+        // Add values from InfluenceSources
+
+        foreach (InfluenceSource source in sources) {
+            InsertNewValues(source);
+        }
+    }
+
     public IEnumerator UpdateMap() {
         while (true) {
-            grid.ForEachCell((x, y) => {
-                if (!Mathf.Approximately(decayMap[x, y], 0)) {
-                    decayMap[x, y] -= Mathf.Sign(decayMap[x, y]) * decayPerSecond * updateTime;
-                    if (Mathf.Abs(decayMap[x, y]) <= zeroThreshold) {
-                        decayMap[x, y] = 0;
-                    }
-                }
-            });
-
-            // Clear addition layer
-            addMap = new float[grid.GetWidth(), grid.GetHeight()];
-            // Add values from InfluenceSources
-
-            foreach (InfluenceSource source in sources) {
-                InsertNewValues(source);
-            }
-
+            UpdateInfluences();
             Display();
             yield return new WaitForSeconds(updateTime);
         }
@@ -135,6 +138,8 @@ public class InfluenceMap : MonoBehaviour {
         });
     }
 
+    #endregion Sequential
+
     #region Parallel
 
     private int completed;
@@ -144,30 +149,39 @@ public class InfluenceMap : MonoBehaviour {
         public Bounds bounds;
     }
 
+    public IEnumerator UpdateInfluencesParallel() {
+        grid.ForEachCell((x, y) => {
+            if (!Mathf.Approximately(decayMap[x, y], 0)) {
+                decayMap[x, y] -= Mathf.Sign(decayMap[x, y]) * decayPerSecond * updateTime;
+                if (Mathf.Abs(decayMap[x, y]) <= zeroThreshold) {
+                    decayMap[x, y] = 0;
+                }
+            }
+        });
+
+        // Clear addition layer
+        addMap = new float[grid.GetWidth(), grid.GetHeight()];
+        // Add values from InfluenceSources
+
+        completed = 0;
+        foreach (var source in sources) {
+            ThreadData data = new ThreadData();
+            data.source = source;
+            if (source.GetComponentInChildren<Renderer>() != null)
+                data.bounds = source.GetComponentInChildren<Renderer>().bounds;
+            else
+                data.bounds = source.transform.parent.GetComponentInChildren<Renderer>().bounds;
+            
+            ThreadPool.QueueUserWorkItem(new WaitCallback(InsertNewValuesParallel), data);
+        }
+
+        yield return new WaitUntil(() => completed >= sources.Count);
+    }
+
     public IEnumerator ParallelUpdateMap() {
         while (true) {
-            grid.ForEachCell((x, y) => {
-                if (!Mathf.Approximately(decayMap[x, y], 0)) {
-                    decayMap[x, y] -= Mathf.Sign(decayMap[x, y]) * decayPerSecond * updateTime;
-                    if (Mathf.Abs(decayMap[x, y]) <= zeroThreshold) {
-                        decayMap[x, y] = 0;
-                    }
-                }
-            });
 
-            // Clear addition layer
-            addMap = new float[grid.GetWidth(), grid.GetHeight()];
-            // Add values from InfluenceSources
-
-            completed = 0;
-            foreach (var source in sources) {
-                ThreadData data = new ThreadData();
-                data.source = source;
-                data.bounds = source.GetComponentInChildren<Renderer>().bounds;
-                ThreadPool.QueueUserWorkItem(new WaitCallback(InsertNewValuesParallel), data);
-            }
-
-            yield return new WaitUntil(() => completed >= sources.Count);
+            yield return UpdateInfluencesParallel();
 
             Display();
             UpdateMapDelegates();
@@ -189,8 +203,28 @@ public class InfluenceMap : MonoBehaviour {
     void InsertNewValuesParallel(object obj) {
         ThreadData data = obj as ThreadData;
         InfluenceSource source = data.source;
+
+        // Get middle point for angle calculation
+        var middle = new Vector2Int();
+        int count = 0;
+        foreach (var pos in grid.ProjectGridPos(data.bounds)) {
+            middle += pos;
+            count++;
+        }
+        middle.x /= count;
+        middle.y /= count;
+        
+        var projected = Vector3.ProjectOnPlane(source.sourceDirection, Vector3.up);
+        var onPlane = new Vector2(projected.x, projected.z);
+
         grid.BFS(grid.ProjectGridPos(data.bounds), source.range, (pos, it) => {
-            Add(ref addMap[pos.x, pos.y], source.GetValue(it, source.sourceValue, source.range));
+            // 1 if same direction, 0 if completely other direction! Linear in between!
+            float angleCalc = 1;
+            if (onPlane == Vector2.zero) {
+                angleCalc = 1 - Vector2.Angle(onPlane, middle + pos) / 180;
+            }
+
+            Add(ref addMap[pos.x, pos.y], source.GetValue(it, source.sourceValue, source.range) * angleCalc);
             Interlocked.Exchange(ref decayMap[pos.x, pos.y], Mathf.Max(addMap[pos.x, pos.y], decayMap[pos.x, pos.y]));
         }, (neighbor) => {
             return Mathf.Approximately(obstacleHeights.GetHeight(neighbor), 0);

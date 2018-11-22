@@ -40,5 +40,10 @@ public class AIMovement : MonoBehaviour {
     public class WeightedMap {
         public InfluenceMap map;
         public float weight;
+		
+	}
+
+    public Vector3 GetVelocity() {
+        return (transform.position + map.grid.GridToWorld(nextPos)).normalized * speed;
     }
 }
