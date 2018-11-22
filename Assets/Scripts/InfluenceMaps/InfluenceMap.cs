@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -11,6 +12,8 @@ public class InfluenceMap : MonoBehaviour {
     public float decayPerSecond = 1;
     public float visualizedMaxValue;
     public float updateFrequency = 30;
+
+    public float directionModifier;
 
     private float[,] addMap;
     private float[,] decayMap;
@@ -97,51 +100,14 @@ public class InfluenceMap : MonoBehaviour {
         tex.Apply();
     }
 
-    #region Sequential
-
-    public void UpdateInfluences() {
-        grid.ForEachCell((x, y) => {
-            if (!Mathf.Approximately(decayMap[x, y], 0)) {
-                decayMap[x, y] -= Mathf.Sign(decayMap[x, y]) * decayPerSecond * updateTime;
-                if (Mathf.Abs(decayMap[x, y]) <= zeroThreshold) {
-                    decayMap[x, y] = 0;
-                }
-            }
-        });
-
-        // Clear addition layer
-        addMap = new float[grid.GetWidth(), grid.GetHeight()];
-        // Add values from InfluenceSources
-
-        foreach (InfluenceSource source in sources) {
-            InsertNewValues(source);
-        }
-    }
-
-    public IEnumerator UpdateMap() {
-        while (true) {
-            UpdateInfluences();
-            Display();
-            yield return new WaitForSeconds(updateTime);
-        }
-    }
-    
-    void InsertNewValues(InfluenceSource source) {
-        grid.BFS(grid.ProjectGridPos(source.GetComponentInChildren<Renderer>().bounds), source.range, (pos, it) => {
-            addMap[pos.x, pos.y] += source.GetValue(it, source.sourceValue, source.range);
-            decayMap[pos.x, pos.y] = Mathf.Max(addMap[pos.x, pos.y], decayMap[pos.x, pos.y]);
-        }, (neighbor) => {
-            return Mathf.Approximately(obstacleHeights.GetHeight(neighbor), 0);
-        });
-    }
-
-    #endregion Sequential
-
     #region Parallel
 
     private int completed;
 
     private class ThreadData {
+        public Vector3 position;
+        public Vector2Int gridPos;
+        public Vector3 direction;
         public InfluenceSource source;
         public Bounds bounds;
     }
@@ -163,8 +129,13 @@ public class InfluenceMap : MonoBehaviour {
         completed = 0;
         foreach (var source in sources) {
             ThreadData data = new ThreadData();
+            data.position = source.gameObject.transform.position;
+            data.gridPos = grid.WorldToGrid(source.gameObject.transform.position);
+            data.direction = source.sourceDirection;
             data.source = source;
-            if (source.GetComponentInChildren<Renderer>() != null)
+            if (source.spreadBounds != null)
+                data.bounds = source.spreadBounds.bounds;
+            else if (source.GetComponentInChildren<Renderer>() != null)
                 data.bounds = source.GetComponentInChildren<Renderer>().bounds;
             else
                 data.bounds = source.transform.parent.GetComponentInChildren<Renderer>().bounds;
@@ -197,35 +168,44 @@ public class InfluenceMap : MonoBehaviour {
     }
 
     void InsertNewValuesParallel(object obj) {
-        ThreadData data = obj as ThreadData;
-        InfluenceSource source = data.source;
+        try {
+            ThreadData data = obj as ThreadData;
+            InfluenceSource source = data.source;
 
-        // Get middle point for angle calculation
-        var middle = new Vector2Int();
-        int count = 0;
-        foreach (var pos in grid.ProjectGridPos(data.bounds)) {
-            middle += pos;
-            count++;
-        }
-        middle.x /= count;
-        middle.y /= count;
-        
-        var projected = Vector3.ProjectOnPlane(source.sourceDirection, Vector3.up);
-        var onPlane = new Vector2(projected.x, projected.z);
-
-        grid.BFS(grid.ProjectGridPos(data.bounds), source.range, (pos, it) => {
-            // 1 if same direction, 0 if completely other direction! Linear in between!
-            float angleCalc = 1;
-            if (onPlane == Vector2.zero) {
-                angleCalc = 1 - Vector2.Angle(onPlane, middle + pos) / 180;
+            // Get middle point for angle calculation
+            var middle = new Vector2Int();
+            int count = 0;
+            foreach (var pos in grid.ProjectGridPos(data.bounds)) {
+                middle += pos;
+                count++;
+            }
+            if (count == 0) {
+                middle = data.gridPos;
+            } else {
+                middle.x /= count;
+                middle.y /= count;
             }
 
-            Add(ref addMap[pos.x, pos.y], source.GetValue(it, source.sourceValue, source.range) * angleCalc);
-            Interlocked.Exchange(ref decayMap[pos.x, pos.y], Mathf.Max(addMap[pos.x, pos.y], decayMap[pos.x, pos.y]));
-        }, (neighbor) => {
-            return Mathf.Approximately(obstacleHeights.GetHeight(neighbor), 0);
-        });
-        Interlocked.Increment(ref completed);
+            float angleCalc = 1;
+            var dir = new Vector2(data.direction.x, data.direction.z);
+
+            grid.BFS(grid.ProjectGridPos(data.bounds), source.range, (pos, it) => {
+                if (dir != Vector2.zero) {
+                    float dot = (Vector2.Dot(dir.normalized, new Vector2(pos.x - middle.x, pos.y - middle.y).normalized) + 1) / 2;
+                    angleCalc = dot;
+                }
+                var addVal = source.GetValue(it, source.sourceValue, source.range) * angleCalc;
+                Add(ref addMap[pos.x, pos.y], addVal);
+                Interlocked.Exchange(ref decayMap[pos.x, pos.y], Mathf.Max(addMap[pos.x, pos.y], decayMap[pos.x, pos.y]));
+            }, (neighbor) => {
+                return Mathf.Approximately(obstacleHeights.GetHeight(neighbor), 0);
+            }, (neighbor) => {
+                return dir != Vector2.zero ? angleCalc * directionModifier * data.direction.magnitude : 0;
+            });
+            Interlocked.Increment(ref completed);
+        } catch (Exception e) {
+            Debug.LogException(e);
+        }
     }
 
     #endregion Parallel

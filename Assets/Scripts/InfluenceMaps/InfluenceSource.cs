@@ -5,7 +5,8 @@ public abstract class InfluenceSource : MonoBehaviour {
     public float sourceValue;
     public int range;
     public InfluenceMap parentMap;
-    public Vector3 sourceDirection { get; protected set; }
+    public BoxCollider spreadBounds;
+    public virtual Vector3 sourceDirection { get; protected set; }
 
     protected virtual void Start() {
         if (parentMap != null)
@@ -32,4 +33,13 @@ public abstract class InfluenceSource : MonoBehaviour {
     }
 
     public abstract float GetValue(float distance, float sourceValue, float maxDistance);
+
+    public Bounds GetBounds() {
+        if (spreadBounds != null)
+            return spreadBounds.bounds;
+        else if (GetComponentInChildren<Renderer>() != null)
+            return GetComponentInChildren<Renderer>().bounds;
+        else
+            return transform.parent.GetComponentInChildren<Renderer>().bounds;
+    }
 }

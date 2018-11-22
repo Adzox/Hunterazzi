@@ -113,8 +113,8 @@ public class SharedGrid : MonoBehaviour {
     public IEnumerable<Vector2Int> ProjectGridPos(Bounds bounds) {
         Vector2Int min = WorldToGrid(bounds.min);
         Vector2Int max = WorldToGrid(bounds.max);
-        for (int x = min.x; x < max.x; x++) {
-            for (int y = min.y; y < max.y; y++) {
+        for (int x = min.x; x <= max.x; x++) {
+            for (int y = min.y; y <= max.y; y++) {
                 if (InBounds(x, y))
                     yield return new Vector2Int(x, y);
             }
@@ -137,14 +137,14 @@ public class SharedGrid : MonoBehaviour {
         };
     }
 
-    public Dictionary<Vector2Int, int> BFS(int maxIterations, Action<Vector2Int, int> action, Predicate<Vector2Int> validNeighbor, params Vector2Int[] startPositions) {
-        return BFS(startPositions, maxIterations, action, validNeighbor);
+    public Dictionary<Vector2Int, float> BFS(int maxDist, Action<Vector2Int, float> action, Predicate<Vector2Int> validNeighbor, Func<Vector2Int, float> distanceAction = null, params Vector2Int[] startPositions) {
+        return BFS(startPositions, maxDist, action, validNeighbor, distanceAction);
     }
 
-    public Dictionary<Vector2Int, int> BFS(IEnumerable<Vector2Int> startPositions, int maxIterations, Action<Vector2Int, int> action, Predicate<Vector2Int> validNeighbor) {
+    public Dictionary<Vector2Int, float> BFS(IEnumerable<Vector2Int> startPositions, int maxDist, Action<Vector2Int, float> action, Predicate<Vector2Int> validNeighbor, Func<Vector2Int, float> distanceAction = null) {
         var frontier = new Queue<Vector2Int>();
         var discovered = new HashSet<Vector2Int>();
-        var distanceTo = new Dictionary<Vector2Int, int>();
+        var distanceTo = new Dictionary<Vector2Int, float>();
         foreach (Vector2Int pos in startPositions) {
             frontier.Enqueue(pos);
             discovered.Add(pos);
@@ -152,18 +152,22 @@ public class SharedGrid : MonoBehaviour {
         }
 
         while (frontier.Count != 0) {
-            var pos = frontier.Dequeue();
-            int iteration = distanceTo[pos];
+            var currentPos = frontier.Dequeue();
+            float currentDist = distanceTo[currentPos];
 
-            if (maxIterations > iteration) {
+            if (maxDist > currentDist) {
 
-                action.Invoke(pos, iteration);
+                action.Invoke(currentPos, currentDist);
 
-                foreach (var neighbor in GetNeighbors8(pos)) {
-                    if (InBounds(neighbor) && validNeighbor.Invoke(neighbor) && ((distanceTo.ContainsKey(neighbor) && iteration + 1 < distanceTo[neighbor]) || !discovered.Contains(neighbor))) {
+                foreach (var neighbor in GetNeighbors8(currentPos)) {
+                    if (InBounds(neighbor) && validNeighbor.Invoke(neighbor) && ((distanceTo.ContainsKey(neighbor) && currentDist + 1 < distanceTo[neighbor]) || !discovered.Contains(neighbor))) {
                         discovered.Add(neighbor);
                         frontier.Enqueue(neighbor);
-                        distanceTo[neighbor] = iteration + 1;
+                        float distanceReduction = 0;
+                        if (distanceAction != null) {
+                            distanceReduction = distanceAction.Invoke(neighbor);
+                        }
+                        distanceTo[neighbor] = currentDist + 1 - distanceReduction;
                     }
                 }
             }
