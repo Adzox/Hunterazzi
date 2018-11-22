@@ -155,7 +155,8 @@ public class InfluenceMap : MonoBehaviour {
             yield return UpdateInfluencesParallel();
 
             Display();
-            UpdateMapDelegates();
+            if (UpdateMapDelegates != null)
+                UpdateMapDelegates();
             yield return new WaitForSeconds(updateTime);
         }
     }
