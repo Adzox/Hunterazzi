@@ -27,6 +27,9 @@ public class InfluenceMap : MonoBehaviour {
 
     private const float zeroThreshold = 0.1f;
 
+    public delegate void UpdateDelegate();
+    public UpdateDelegate UpdateMapDelegates;
+
     internal bool standalone = true;
 
     void Start () {
@@ -152,6 +155,7 @@ public class InfluenceMap : MonoBehaviour {
             yield return UpdateInfluencesParallel();
 
             Display();
+            UpdateMapDelegates();
             yield return new WaitForSeconds(updateTime);
         }
     }
