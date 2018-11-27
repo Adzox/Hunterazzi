@@ -15,7 +15,7 @@ public class AIMovement : MonoBehaviour {
 
 	void Start () {
         path = new List<Vector2Int>();
-        map.UpdateMapDelegates += Search;
+        StartCoroutine(FindPath());
 	}
 
     void Update() {
@@ -30,12 +30,6 @@ public class AIMovement : MonoBehaviour {
         transform.position = newPos;
     }
 
-    void Search() {
-        currentPos = map.grid.WorldToGrid(transform.position);
-        path = InfluenceMapNavigation.FindMax(map, currentPos, searchDistance, 1f);
-
-    }
-
     [System.Serializable]
     public class WeightedMap {
         public InfluenceMap map;
@@ -45,5 +39,13 @@ public class AIMovement : MonoBehaviour {
 
     public Vector3 GetVelocity() {
         return (transform.position + map.grid.GridToWorld(nextPos)).normalized * speed;
+    }
+
+    IEnumerator FindPath() {
+        while (true) {
+            currentPos = maps[0].map.grid.WorldToGrid(transform.position);
+            path = InfluenceMapNavigation.FindMax(maps, currentPos, searchDistance, 1f);
+            yield return new WaitForSeconds(1 / maps[0].map.updateFrequency);
+        }
     }
 }
