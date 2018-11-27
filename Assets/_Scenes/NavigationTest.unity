@@ -213,6 +213,7 @@ MonoBehaviour:
   sourceValue: 0.7
   range: 5
   parentMap: {fileID: 486342467}
+  spreadBounds: {fileID: 0}
 --- !u!1 &170076733
 GameObject:
   m_ObjectHideFlags: 0
@@ -451,6 +452,7 @@ MonoBehaviour:
   decayPerSecond: 1
   visualizedMaxValue: 1
   updateFrequency: 10
+  directionModifier: 0
 --- !u!1 &534669902
 GameObject:
   m_ObjectHideFlags: 0
@@ -561,6 +563,7 @@ MonoBehaviour:
   sourceValue: 1
   range: 5
   parentMap: {fileID: 486342467}
+  spreadBounds: {fileID: 0}
 --- !u!65 &857319299
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -658,10 +661,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 063db3c84c0774816b47e08c0ec2ad65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  map: {fileID: 486342467}
   maps:
   - map: {fileID: 486342467}
     weight: 1
+  grid: {fileID: 1438606451}
   speed: 4
   searchDistance: 10
 --- !u!136 &1266414303

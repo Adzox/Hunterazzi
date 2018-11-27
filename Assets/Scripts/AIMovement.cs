@@ -4,11 +4,11 @@ using UnityEngine;
 
 public class AIMovement : MonoBehaviour {
 
-    public InfluenceMap map;
     public List<WeightedMap> maps;
     List<Vector2Int> path;
     Vector2Int currentPos;
     Vector2Int nextPos;
+    public SharedGrid grid;
 
     public float speed;
     public float searchDistance;
@@ -25,7 +25,7 @@ public class AIMovement : MonoBehaviour {
         } else {
             nextPos = currentPos;
         }
-        Vector3 newPos = Vector3.MoveTowards(transform.position, map.grid.GridToCenterWorld(nextPos), speed * Time.deltaTime);
+        Vector3 newPos = Vector3.MoveTowards(transform.position, grid.GridToCenterWorld(nextPos), speed * Time.deltaTime);
         newPos.y = transform.position.y;
         transform.position = newPos;
         transform.LookAt(newPos, Vector3.up);
@@ -39,12 +39,12 @@ public class AIMovement : MonoBehaviour {
 	}
 
     public Vector3 GetVelocity() {
-        return (transform.position + map.grid.GridToWorld(nextPos)).normalized * speed;
+        return (transform.position + grid.GridToWorld(nextPos)).normalized * speed;
     }
 
     IEnumerator FindPath() {
         while (true) {
-            currentPos = maps[0].map.grid.WorldToGrid(transform.position);
+            currentPos = grid.WorldToGrid(transform.position);
             path = InfluenceMapNavigation.FindMax(maps, currentPos, searchDistance, 1f);
             yield return new WaitForSeconds(1 / maps[0].map.updateFrequency);
         }
