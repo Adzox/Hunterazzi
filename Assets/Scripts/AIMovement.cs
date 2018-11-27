@@ -28,6 +28,7 @@ public class AIMovement : MonoBehaviour {
         Vector3 newPos = Vector3.MoveTowards(transform.position, map.grid.GridToCenterWorld(nextPos), speed * Time.deltaTime);
         newPos.y = transform.position.y;
         transform.position = newPos;
+        transform.LookAt(newPos, Vector3.up);
     }
 
     void Search() {

@@ -1,11 +1,44 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using UnityEngine;
 
 public static class Extensions {
+
+    /// <summary>
+    /// Goes up to the parent if it exists and does a GetComponentInChildren from there.
+    /// If the game object does not have a parent, this method is synonymus to GetComponentInChildren.
+    /// </summary>
+    /// <typeparam name="T">The component to get</typeparam>
+    /// <param name="gameObject">The gameobject</param>
+    /// <returns>The component of type T or null</returns>
+    public static T GetComponentFromParentInChildren<T>(this GameObject gameObject) where T: Component {
+        if (gameObject.transform.parent != null) {
+            return gameObject.transform.parent.GetComponentInChildren<T>();
+        } else {
+            return gameObject.GetComponentInChildren<T>();
+        }
+    }
+
+    /// <summary>
+    /// Goes up to the parent if it exists and does a GetComponentsInChildren from there.
+    /// If the game object does not have a parent, this method is synonymus to GetComponentInChildren.
+    /// </summary>
+    /// <typeparam name="T">The component to get</typeparam>
+    /// <param name="gameObject">The gameobject</param>
+    /// <returns>An array of all components of type T or null</returns>
+    public static T[] GetComponentsFromParentInChildren<T>(this GameObject gameObject) where T : Component {
+        if (gameObject.transform.parent != null) {
+            return gameObject.transform.parent.GetComponentsInChildren<T>();
+        } else {
+            return gameObject.GetComponentsInChildren<T>();
+        }
+        
+    }
+
+    public static bool Contains(this LayerMask mask, int layer) {
+        return mask == (mask | (1 << layer));
+    }
 
     public static IEnumerable<KeyValuePair<T1, T2>> Zip<T1, T2>(IEnumerable<T1> first, IEnumerable<T2> second) {
         using (var e1 = first.GetEnumerator())

@@ -7,6 +7,7 @@ public abstract class InfluenceSource : MonoBehaviour {
     public InfluenceMap parentMap;
     public BoxCollider spreadBounds;
     public virtual Vector3 sourceDirection { get; protected set; }
+    public SourceType type;
 
     protected virtual void Start() {
         if (parentMap != null)
