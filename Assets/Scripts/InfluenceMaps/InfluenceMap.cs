@@ -142,8 +142,12 @@ public class InfluenceMap : MonoBehaviour {
                 data.bounds = source.GetComponentInChildren<Renderer>().bounds;
             else
                 data.bounds = source.transform.parent.GetComponentInChildren<Renderer>().bounds;
-            
-            ThreadPool.QueueUserWorkItem(new WaitCallback(InsertNewValuesParallel), data);
+
+            try {
+                ThreadPool.QueueUserWorkItem(new WaitCallback(InsertNewValuesParallel), data);
+            } catch (NotSupportedException e) {
+                Debug.LogError(e);
+            }
         }
 
         yield return new WaitUntil(() => completed >= sources.Count);
