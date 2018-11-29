@@ -55,10 +55,18 @@ public class InfluenceMapNavigation {
         return res;
     }
 
-    // More TODO: Take a SharedGrid as argument or extract from one of the maps.
-    // Use it for functions.
     public static List<Vector2Int> FindMax(List<AIMovement.WeightedMap> maps, Vector2Int start, float searchDist,
                                            float minInfluence = 0f) {
+        return FindMax(maps, start, searchDist, new Vector2Int(-1, -1), 0, minInfluence);
+    }
+
+    // More TODO: Take a SharedGrid as argument or extract from one of the maps.
+    // Use it for functions.
+
+    // TODO: ADD THE FRICKING POINT THING TO BELOW FUNCTION!!!!!
+
+    public static List<Vector2Int> FindMax(List<AIMovement.WeightedMap> maps, Vector2Int start, float searchDist,
+                                           Vector2Int newGridPos, float gridPointWeight, float minInfluence = 0f) {
         var frontier = new Queue<Vector2Int>() { start };
         var discovered = new HashSet<Vector2Int>() { start };
         var distanceTo = new Dictionary<Vector2Int, float>() { { start, 0 } };

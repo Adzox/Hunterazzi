@@ -17,7 +17,7 @@ public class AIMovement : MonoBehaviour {
     bool isRandomWalking;
     bool isWaiting;
 
-	void Start () {
+	protected virtual void Start () {
         path = new List<Vector2Int>();
         StartCoroutine(FindPath());
 	}
@@ -82,6 +82,7 @@ public class AIMovement : MonoBehaviour {
 
     IEnumerator FindPath() {
         while (true) {
+            // maps[0].map.AddInfluence(newGridPosition, preferenceWeight);
             currentPos = grid.WorldToGrid(transform.position);
             path = InfluenceMapNavigation.FindMax(maps, currentPos, searchDistance, 1f);
             yield return new WaitForSeconds(1 / maps[0].map.updateFrequency);
