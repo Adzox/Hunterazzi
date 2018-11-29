@@ -507,7 +507,7 @@ MonoBehaviour:
   decayPerSecond: 1
   visualizedMaxValue: 2
   updateFrequency: 10
-  directionModifier: 0.1
+  directionModifier: 1.66
   isPresenceMap: 1
 --- !u!23 &438107563
 MeshRenderer:
@@ -1405,6 +1405,11 @@ Prefab:
       propertyPath: maps.Array.data[3].map
       value: 
       objectReference: {fileID: 1082352776}
+    - target: {fileID: 114666953962251060, guid: 1cb0b9d2114cb6147b20ad964074d4a9,
+        type: 2}
+      propertyPath: grid
+      value: 
+      objectReference: {fileID: 1761784000}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 1cb0b9d2114cb6147b20ad964074d4a9, type: 2}
   m_IsPrefabAsset: 0
