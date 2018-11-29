@@ -1,9 +1,14 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public static class Extensions {
+
+    public static IEnumerable<T> FindComponentsWithTag<T>(this GameObject gameObject, string tag) where T: Component {
+        return GameObject.FindObjectsOfType<T>().Where(t => t.gameObject.CompareTag(tag)).AsEnumerable();
+    }
 
     /// <summary>
     /// Goes up to the parent if it exists and does a GetComponentInChildren from there.

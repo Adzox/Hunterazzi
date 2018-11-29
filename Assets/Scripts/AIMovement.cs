@@ -62,6 +62,13 @@ public class AIMovement : MonoBehaviour {
         }
     }
 
+    private void OnDrawGizmosSelected() {
+        if (grid != null) {
+            Gizmos.color = Color.gray;
+            Gizmos.DrawWireSphere(transform.position, grid.GetCellSize() * searchDistance);
+        }
+    }
+
     [System.Serializable]
     public class WeightedMap {
         public InfluenceMap map;
