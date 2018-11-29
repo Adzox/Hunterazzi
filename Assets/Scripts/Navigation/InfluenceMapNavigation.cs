@@ -85,8 +85,11 @@ public class InfluenceMapNavigation {
             }
 
             float currentDistance = distanceTo[pos];
-
             if (searchDist > currentDistance) {
+                bool foundImprovement = false;
+                Vector2Int leastBadNode = pos; // This is used if all neighbours have influence lower than minInfluence
+                float leastBadInfluence = Mathf.NegativeInfinity;
+
                 foreach (var n in SharedGrid.GetNeighbors4(pos)) {
                     if (maps[0].map.grid.InBounds(n)) {
                         float distToN = currentDistance + Vector2Int.Distance(pos, n);
@@ -95,6 +98,10 @@ public class InfluenceMapNavigation {
                             avgInfluence += map.map.GetInfluence(n.x, n.y) * map.weight;
                         }
                         avgInfluence /= maps.Count;
+                        if (avgInfluence > leastBadInfluence) {
+                            leastBadNode = n;
+                            leastBadInfluence = avgInfluence;
+                        }
                         if (avgInfluence >= minInfluence &&
                             Mathf.Approximately(maps[0].map.obstacleHeights.GetHeight(n), 0) &&
                             ((distanceTo.ContainsKey(n) && distToN < distanceTo[n]) || !discovered.Contains(n))) {
@@ -103,8 +110,19 @@ public class InfluenceMapNavigation {
                             frontier.Enqueue(n);
                             distanceTo[n] = distToN;
                             prev[n] = pos;
+                            foundImprovement = true;
                         }
                     }
+                }
+                float distToLBN = currentDistance + Vector2Int.Distance(pos, leastBadNode);
+                if (!foundImprovement &&
+                    Mathf.Approximately(maps[0].map.obstacleHeights.GetHeight(leastBadNode), 0) &&
+                    ((distanceTo.ContainsKey(leastBadNode) && distToLBN < distanceTo[leastBadNode]) || !discovered.Contains(leastBadNode))) {
+
+                    discovered.Add(leastBadNode);
+                    frontier.Enqueue(leastBadNode);
+                    distanceTo[leastBadNode] = distToLBN;
+                    prev[leastBadNode] = pos;
                 }
             }
         }
