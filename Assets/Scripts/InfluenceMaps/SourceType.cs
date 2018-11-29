@@ -2,6 +2,7 @@
     Player,
     Rabbit,
     Vegetable,
+    Wolf,
 }
 
 public static class SourceTypeExtensions {
@@ -14,6 +15,8 @@ public static class SourceTypeExtensions {
                 return "RabbitMap";
             case SourceType.Vegetable:
                 return "VegetableMap";
+            case SourceType.Wolf:
+                return "WolfMap";
             default:
                 return null;
         }
