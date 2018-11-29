@@ -1200,7 +1200,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maps:
   - map: {fileID: 575531025}
-    weight: 1
+    weight: -1
   grid: {fileID: 1761784000}
   speed: 4
   searchDistance: 10

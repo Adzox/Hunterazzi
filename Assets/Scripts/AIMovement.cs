@@ -19,6 +19,7 @@ public class AIMovement : MonoBehaviour {
 	}
 
     void Update() {
+        Debug.Log(path.Count);
         if (path.Count > 0) {
             nextPos = path[0];
             if (currentPos == nextPos) path.Remove(path[0]);
