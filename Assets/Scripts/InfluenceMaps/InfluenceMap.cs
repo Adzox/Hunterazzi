@@ -15,6 +15,9 @@ public class InfluenceMap : MonoBehaviour {
 
     public float directionModifier;
 
+    [Space]
+    public bool isPresenceMap = false;
+
     private float[,] addMap;
     private float[,] decayMap;
     private List<InfluenceSource> sources = new List<InfluenceSource>();
