@@ -13,8 +13,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weightedTypes:
   - source: 0
-    weight: -2
+    weight: -20
   - source: 1
     weight: 1
   - source: 2
-    weight: 1.5
+    weight: 20

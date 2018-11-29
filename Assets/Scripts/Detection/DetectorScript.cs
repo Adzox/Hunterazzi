@@ -28,26 +28,32 @@ public class DetectorScript : MonoBehaviour {
     }
 
     void OnTriggerEnter(Collider other) {
-        if (detectLayers.Contains(other.gameObject.layer) && detectTags.Contains(other.gameObject.tag)) {
-            detected.Add(other.gameObject);
-            if (OnDetectEnter != null)
-                OnDetectEnter.Invoke(other.gameObject);
+        if (detectLayers.Contains(other.gameObject.layer)) {
+            if (detectTags.Count == 0 || (detectTags.Count > 0 && detectTags.Contains(other.gameObject.tag))) {
+                detected.Add(other.gameObject);
+                if (OnDetectEnter != null)
+                    OnDetectEnter.Invoke(other.gameObject);
+            }    
         }
     }
 
     private void OnTriggerStay(Collider other) {
-        if (detectLayers.Contains(other.gameObject.layer) && detectTags.Contains(other.gameObject.tag)) {
-            Debug.DrawLine(transform.parent.position, other.transform.position, Color.magenta);
-            if (OnDetectStay != null)
-                OnDetectStay.Invoke(other.gameObject);
+        if (detectLayers.Contains(other.gameObject.layer)) {
+            if (detectTags.Count == 0 || (detectTags.Count > 0 && detectTags.Contains(other.gameObject.tag))) {
+                Debug.DrawLine(transform.parent.position, other.transform.position, Color.magenta);
+                if (OnDetectStay != null)
+                    OnDetectStay.Invoke(other.gameObject);
+            }
         }
     }
 
     void OnTriggerExit(Collider other) {
-        if (detectLayers.Contains(other.gameObject.layer) && detectTags.Contains(other.gameObject.tag)) {
-            detected.Remove(other.gameObject);
-            if (OnDetectExit != null)
-                OnDetectExit.Invoke(other.gameObject);
+        if (detectLayers.Contains(other.gameObject.layer)) {
+            if (detectTags.Count == 0 || (detectTags.Count > 0 && detectTags.Contains(other.gameObject.tag))) {
+                detected.Remove(other.gameObject);
+                if (OnDetectExit != null)
+                    OnDetectExit.Invoke(other.gameObject);
+            }
         }
     }
 }
