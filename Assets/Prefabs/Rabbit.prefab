@@ -272,7 +272,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 063db3c84c0774816b47e08c0ec2ad65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  map: {fileID: 0}
   maps:
   - map: {fileID: 0}
     weight: 1
@@ -282,6 +281,9 @@ MonoBehaviour:
     weight: -2
   - map: {fileID: 0}
     weight: -2
+  - map: {fileID: 0}
+    weight: 1.5
+  grid: {fileID: 0}
   speed: 3
   searchDistance: 10
 --- !u!114 &114754504935353654
