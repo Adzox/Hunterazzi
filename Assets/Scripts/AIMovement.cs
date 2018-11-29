@@ -9,6 +9,7 @@ public class AIMovement : MonoBehaviour {
     Vector2Int currentPos;
     Vector2Int nextPos;
     public SharedGrid grid;
+    public Transform modelTransform;
 
     public float speed;
     public float searchDistance;
