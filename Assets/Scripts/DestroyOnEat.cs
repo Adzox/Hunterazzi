@@ -6,9 +6,16 @@ public class DestroyOnEat : MonoBehaviour {
 
     private void OnTriggerEnter(Collider other) {
         var animal = other.GetComponentInParent<Animal>();
+        var thisAnimal = transform.GetComponentInParent<Animal>();
         if (animal != null && animal.GetSourceType() == SourceType.Rabbit) {
-            // Fill hunger, play sound, ...
-            Destroy(gameObject.transform.parent.gameObject);
+            if (transform.tag == "Carrot") {
+                Destroy(gameObject.transform.parent.gameObject);
+            } 
+
+        } if (animal != null && animal.GetSourceType() == SourceType.Wolf) {
+            if (thisAnimal != null && thisAnimal.GetSourceType() == SourceType.Rabbit) {
+                Destroy((gameObject.transform.parent.gameObject));
+            }
         }
     }
 }
