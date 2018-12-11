@@ -12,6 +12,7 @@ public class SightScript : DetectorScript {
     [Tooltip("The offset for the raycasting.")]
     [Range(0, float.MaxValue)]
     public float rayOffset;
+    public float rayHeight = 0.5f;
 
     [Tooltip("The radius in which all is 'seen', no matter angle.")]
     [Range(0, float.MaxValue)]
@@ -45,16 +46,25 @@ public class SightScript : DetectorScript {
     }
 
     void CheckSight(GameObject other) {
-        float length = (other.transform.position - transform.parent.position).magnitude;
-        Ray ray = new Ray(transform.parent.position + (other.transform.position - transform.parent.position).normalized * rayOffset, other.transform.position - transform.parent.position);
+        if (other == null)
+            return;
+        float length = (other.transform.parent.position - transform.parent.position).magnitude;
+
+        var startPos = transform.parent.position + (other.transform.parent.position - transform.parent.position).normalized * rayOffset;
+        startPos.y += rayHeight;
+        var rayDir = other.transform.parent.position - transform.parent.position;
+
+        Ray ray = new Ray(startPos, rayDir);
         RaycastHit hitInfo;
+
         if (seen.Contains(other)) {
-            if (!InVision(other.transform) || !Physics.Raycast(ray, out hitInfo, length, raycastMask.value) || hitInfo.collider.gameObject != other) {
+            if (!InVision(startPos, other.transform) || !Physics.Raycast(ray, out hitInfo, length, raycastMask.value) || hitInfo.collider.gameObject != other) {
                 if (ExitSight != null)
                     ExitSight.Invoke(other);
                 seen.Remove(other);
             } else {
-                Debug.DrawLine(transform.parent.position, other.transform.position, Color.yellow);
+                Debug.DrawRay(ray.origin, ray.direction * length, Color.yellow);
+                //Debug.DrawLine(transform.parent.position, other.transform.parent.position, Color.yellow);
                 if (StaySight != null)
                     StaySight.Invoke(other);
             }
@@ -63,10 +73,25 @@ public class SightScript : DetectorScript {
             seen.Add(other);
             if (EnterSight != null)
                 EnterSight.Invoke(other);
-        } else if (InVision(other.transform) && Physics.Raycast(ray, out hitInfo, length, raycastMask.value) && hitInfo.collider.gameObject == other) {
+        } else if (InVision(startPos, other.transform) && Physics.Raycast(ray, out hitInfo, length, raycastMask.value) && hitInfo.collider.gameObject == other) {
             seen.Add(other);
             if (EnterSight != null)
                 EnterSight.Invoke(other);
+        } else {
+#if false
+            if (gameObject.transform.parent.name == "Rabbit")
+                Debug.DrawRay(ray.origin, ray.direction * length);
+            bool hit = Physics.Raycast(ray, out hitInfo, length, raycastMask.value);
+            var msg = gameObject.transform.parent.name + " can't see " + other.transform.parent.name + ":\n";
+            msg += "In presence: " + ((other.transform.position - transform.position).magnitude <= sensePresenceRadius) + "\n";
+            msg += "In Vision: " + InVision(other.transform) + "\n Raycast hit: " + hit;
+            if (hit) {
+                msg += ": " + hitInfo.transform.parent.name;
+                msg += "\n Hit obj vs expected: " + hitInfo.collider.gameObject.name + ", " + other.name;
+            }
+            msg += "\n";
+            Debug.Log(msg);
+#endif
         }
     }
 
@@ -80,9 +105,9 @@ public class SightScript : DetectorScript {
         Gizmos.DrawWireSphere(transform.position, sensePresenceRadius);
     }
 
-    bool InVision(Transform other) {
+    bool InVision(Vector3 startPos, Transform other) {
         Vector3 forwardDirection = transform.parent.forward * rayOffset;
-        Vector3 toOther = other.position - (transform.parent.position + forwardDirection);
+        Vector3 toOther = other.position - startPos;
         return Vector3.Angle(forwardDirection, toOther) < fieldOfView / 2;
     }
 }

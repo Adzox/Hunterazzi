@@ -23,8 +23,6 @@ public class InfluenceMap : MonoBehaviour {
 
     internal Texture2D tex;
 
-    private float[] defaultNeighborDiminish = { 1, 1, 1, 1, 1, 1, 1, 1 };
-
     private float updateTime;
 
     private const float zeroThreshold = 0.1f;

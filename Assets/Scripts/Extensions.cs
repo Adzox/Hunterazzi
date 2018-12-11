@@ -18,11 +18,14 @@ public static class Extensions {
     /// <param name="gameObject">The gameobject</param>
     /// <returns>The component of type T or null</returns>
     public static T GetComponentFromParentInChildren<T>(this GameObject gameObject) where T: Component {
-        if (gameObject.transform.parent != null) {
-            return gameObject.transform.parent.GetComponentInChildren<T>();
-        } else {
-            return gameObject.GetComponentInChildren<T>();
+        if (gameObject != null) {
+            if (gameObject.transform.parent != null) {
+                return gameObject.transform.parent.GetComponentInChildren<T>();
+            } else {
+                return gameObject.GetComponentInChildren<T>();
+            }
         }
+        return null;
     }
 
     /// <summary>

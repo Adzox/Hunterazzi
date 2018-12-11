@@ -63,10 +63,8 @@ public class InfluenceMapNavigation {
     // More TODO: Take a SharedGrid as argument or extract from one of the maps.
     // Use it for functions.
 
-    // TODO: ADD THE FRICKING POINT THING TO BELOW FUNCTION!!!!!
-
     public static List<Vector2Int> FindMax(List<AIMovement.WeightedMap> maps, Vector2Int start, float searchDist,
-                                           Vector2Int newGridPos, float gridPointWeight, float minInfluence = 0f) {
+                                           Vector2Int flockPoint, float flockPointInfluence, float minInfluence = 0f) {
         var frontier = new Queue<Vector2Int>() { start };
         var discovered = new HashSet<Vector2Int>() { start };
         var distanceTo = new Dictionary<Vector2Int, float>() { { start, 0 } };
@@ -76,6 +74,9 @@ public class InfluenceMapNavigation {
 
         Vector2Int best = start;
         float bestInfluence = 0f;
+        if (flockPoint == best) {
+            bestInfluence += flockPointInfluence;
+        }
         foreach (var map in maps) {
             bestInfluence += map.map.GetInfluence(best.x, best.y) * map.weight;
         }
@@ -83,6 +84,9 @@ public class InfluenceMapNavigation {
         while (frontier.Count != 0) {
             var pos = frontier.Dequeue();
             float influence = 0f;
+            if (pos == flockPoint) {
+                influence += flockPointInfluence;
+            }
             foreach (var map in maps) {
                 influence += map.map.GetInfluence(pos.x, pos.y) * map.weight;
             }
@@ -102,10 +106,15 @@ public class InfluenceMapNavigation {
                     if (maps[0].map.grid.InBounds(n)) {
                         float distToN = currentDistance + Vector2Int.Distance(pos, n);
                         float avgInfluence = 0f;
+                        int count = maps.Count;
+                        if (n == flockPoint) {
+                            avgInfluence += flockPointInfluence;
+                            count++;
+                        }
                         foreach (var map in maps) {
                             avgInfluence += map.map.GetInfluence(n.x, n.y) * map.weight;
                         }
-                        avgInfluence /= maps.Count;
+                        avgInfluence /= count;
                         if (avgInfluence > leastBadInfluence) {
                             leastBadNode = n;
                             leastBadInfluence = avgInfluence;
@@ -137,12 +146,17 @@ public class InfluenceMapNavigation {
 
         // Reconstruct path
         var c = best;
-        while (prev.ContainsKey(c)) {
-            res.Add(c);
-            c = prev[c];
+        
+        if (flockPoint == best) {
+            return new List<Vector2Int>() { flockPoint };
+        } else {
+            while (prev.ContainsKey(c)) {
+                res.Add(c);
+                c = prev[c];
+            }
+            res.Reverse();
+            return res;
         }
-        res.Reverse();
-        return res;
     }
 
 }
