@@ -62,10 +62,8 @@ public class AIMovement : MonoBehaviour {
         
         // Waiting if waiting, have no new path or should ignore new path
         if (waiting && newPath.Count == 0) {
-            Debug.Log("Waiting...");
             return;
         } else if (forceRandom && waiting) {
-            Debug.Log("Force Waiting...");
             return;
         }
 
@@ -75,7 +73,6 @@ public class AIMovement : MonoBehaviour {
             currentPath.Add(RandomWalk());
             isRandomWalking = true;
             forceRandom = true;
-            Debug.Log("Force Random");
         } else if (newPath.Count > 0 && !shouldRandomWalk && !forceRandom) {
             // If a new path exists!
             currentPath.Clear();
@@ -84,18 +81,15 @@ public class AIMovement : MonoBehaviour {
             StopCoroutine("WaitForRandomWalk");
             waiting = false;
             isRandomWalking = false;
-            Debug.Log("New Path");
         } else if (currentPath.Count == 0 && !isRandomWalking && !forceRandom) {
             // Random walk, set path
             currentPath.Clear();
             currentPath.Add(RandomWalk());
             isRandomWalking = true;
-            Debug.Log("Random");
         }
 
         // If still no path after this, do nothing!
         if (currentPath.Count == 0) {
-            Debug.Log("No path");
             return;
         }
 
@@ -167,11 +161,9 @@ public class AIMovement : MonoBehaviour {
     }
 
     protected IEnumerator WaitForRandomWalk() {
-        Debug.Log("Start Wait");
         yield return new WaitForSeconds(Random.Range(minRandomWaitTime, maxRandomWaitTime));
         isRandomWalking = false;
         waiting = false;
         forceRandom = false;
-        Debug.Log("End Wait");
     }
 }
