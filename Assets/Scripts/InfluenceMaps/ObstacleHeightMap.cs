@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class ObstacleHeightMap : MonoBehaviour {
 
@@ -14,13 +12,9 @@ public class ObstacleHeightMap : MonoBehaviour {
         heightObstacleMap = new float[grid.GetWidth(), grid.GetHeight()];
 
         foreach (Transform child in transform) {
-            var bounds = grid.Project(child.GetComponent<Renderer>().bounds);
-
-            grid.ForEachCell((x, y) => {
-                if (bounds.Contains(grid.GridToWorld(x, y)) && bounds.Contains(grid.GridToWorld(x + 1, y + 1))) {
-                    heightObstacleMap[x, y] = bounds.size.y;
-                }
-            });
+            foreach (var gridPos in grid.ProjectGridPos(child.GetComponent<Renderer>().bounds)) {
+                heightObstacleMap[gridPos.x, gridPos.y] = child.GetComponent<Renderer>().bounds.size.y;
+            }
         }
     }
 
